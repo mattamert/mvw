@@ -1,0 +1,11 @@
+.vs
+
+*.suo
+*.VC.db
+*.VC.opendb
+*.sdf
+*.pdb
+*.opensdf
+*.user
+
+out

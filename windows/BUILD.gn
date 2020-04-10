@@ -1,0 +1,5 @@
+executable("model_viewer") {
+  sources = [
+    "main.cpp",
+  ]
+}
