@@ -111,8 +111,8 @@ DefaultPass::~DefaultPass() noexcept { }
 HRESULT DefaultPass::Initialize(ID3D11Device* device) {
   this->InitializeShadersAndInputLayout(
     device,
-    L"C:/Users/matta/source/repos/D3D_Sandbox_Better/D3D_Sandbox_Better/VertexShader.hlsl",
-    L"C:/Users/matta/source/repos/D3D_Sandbox_Better/D3D_Sandbox_Better/PixelShader.hlsl",
+    L"VertexShader.hlsl",
+    L"PixelShader.hlsl",
     vertex_desc);
 
   // First constant buffer is the model-view-perspective transform.
