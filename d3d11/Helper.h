@@ -16,11 +16,17 @@
 //  }
 //}
 
-#if defined(_DEBUG)
-//#if 1
+//#if defined(_DEBUG)
+//#define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
+//#else
+//#define HR(hr) (void)hr
+//#endif
+
+//#if defined(_DEBUG)
+#if 1
 #define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
 #else
-#define HR(hr) (void)hr
+#define HR(hr) if (!SUCCEEDED(hr)) { throw; }
 #endif
 
 template <class T>
