@@ -2,21 +2,21 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
-    <NinjaDir>$(SolutionDir)\out\$(PlatformTarget)_$(Configuration)</NinjaDir>
     <NinjaTarget_windows_modelviewer>windows:windows_modelviewer</NinjaTarget_windows_modelviewer>
     <ExecutableName_windows_modelviewer>windows_modelviewer.exe</ExecutableName_windows_modelviewer>
+    <NinjaTarget_d3d11_renderer>d3d11_renderer</NinjaTarget_d3d11_renderer>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
   <ItemGroup>
-    <BuildMacro Include="NinjaDir">
-      <Value>$(NinjaDir)</Value>
-    </BuildMacro>
     <BuildMacro Include="NinjaTarget_windows_modelviewer">
       <Value>$(NinjaTarget_windows_modelviewer)</Value>
     </BuildMacro>
     <BuildMacro Include="ExecutableName_windows_modelviewer">
       <Value>$(ExecutableName_windows_modelviewer)</Value>
+    </BuildMacro>
+    <BuildMacro Include="NinjaTarget_d3d11_renderer">
+      <Value>$(NinjaTarget_d3d11_renderer)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>

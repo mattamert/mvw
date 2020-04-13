@@ -2,5 +2,6 @@
 group("gn_all") {
   deps = [
     "//windows:windows_modelviewer",
+    "//d3d11:d3d11_renderer",
   ]
 }

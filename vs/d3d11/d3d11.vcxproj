@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
-    <ProjectGuid>{031AE3CF-86B4-4B4C-990D-A4238D9C9BB2}</ProjectGuid>
+    <ProjectGuid>{6B523EB4-65F8-405A-A15C-45D6D7232CDC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,46 +70,63 @@
     <Import Project="..\NinjaProjectTargets.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeOutput>$(NinjaDir)\$(ExecutableName_windows_modelviewer)</NMakeOutput>
-    <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)
-$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)</NMakeCleanCommandLine>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeOutput>$(NinjaDir)\$(ExecutableName_windows_modelviewer)</NMakeOutput>
+    <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d11_renderer).exe</NMakeOutput>
     <NMakePreprocessorDefinitions>_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)
-$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)</NMakeCleanCommandLine>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)
+$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)</NMakeCleanCommandLine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d11_renderer).exe</NMakeOutput>
+    <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)
+$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <NMakeOutput>$(NinjaDir)\$(ExecutableName_windows_modelviewer)</NMakeOutput>
+    <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d11_renderer).exe</NMakeOutput>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)
-$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)</NMakeCleanCommandLine>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)
+$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeOutput>$(NinjaDir)\$(ExecutableName_windows_modelviewer)</NMakeOutput>
+    <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d11_renderer).exe</NMakeOutput>
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
-    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)
-$(NinjaBuildCommand) $(NinjaTarget_windows_modelviewer)</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_windows_modelviewer)</NMakeCleanCommandLine>
-    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)
+$(NinjaBuildCommand) $(NinjaTarget_d3d11_renderer)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d11_renderer)</NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\windows\main.cpp" />
+    <ClCompile Include="..\..\d3d11\AnimationManager.cpp" />
+    <ClCompile Include="..\..\d3d11\App.cpp" />
+    <ClCompile Include="..\..\d3d11\Camera.cpp" />
+    <ClCompile Include="..\..\d3d11\DirectXBase.cpp" />
+    <ClCompile Include="..\..\d3d11\GPUMesh.cpp" />
+    <ClCompile Include="..\..\d3d11\main.cpp" />
+    <ClCompile Include="..\..\d3d11\Object.cpp" />
+    <ClCompile Include="..\..\d3d11\Pass.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\d3d11\AnimationManager.h" />
+    <ClInclude Include="..\..\d3d11\App.h" />
+    <ClInclude Include="..\..\d3d11\Camera.h" />
+    <ClInclude Include="..\..\d3d11\DirectXBase.h" />
+    <ClInclude Include="..\..\d3d11\GPUMesh.h" />
+    <ClInclude Include="..\..\d3d11\Helper.h" />
+    <ClInclude Include="..\..\d3d11\Object.h" />
+    <ClInclude Include="..\..\d3d11\Pass.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\..\d3d11\PixelShader.hlsl" />
+    <FxCompile Include="..\..\d3d11\VertexShader.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
