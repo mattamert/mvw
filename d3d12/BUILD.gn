@@ -1,0 +1,5 @@
+executable("d3d12_renderer") {
+  sources = [
+    "main.cpp",
+  ]
+}

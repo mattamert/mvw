@@ -5,6 +5,7 @@
     <NinjaTarget_windows_modelviewer>windows:windows_modelviewer</NinjaTarget_windows_modelviewer>
     <ExecutableName_windows_modelviewer>windows_modelviewer.exe</ExecutableName_windows_modelviewer>
     <NinjaTarget_d3d11_renderer>d3d11_renderer</NinjaTarget_d3d11_renderer>
+    <NinjaTarget_d3d12_renderer>d3d12_renderer</NinjaTarget_d3d12_renderer>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
@@ -17,6 +18,9 @@
     </BuildMacro>
     <BuildMacro Include="NinjaTarget_d3d11_renderer">
       <Value>$(NinjaTarget_d3d11_renderer)</Value>
+    </BuildMacro>
+    <BuildMacro Include="NinjaTarget_d3d12_renderer">
+      <Value>$(NinjaTarget_d3d12_renderer)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>
