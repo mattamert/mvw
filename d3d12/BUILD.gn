@@ -1,5 +1,12 @@
 executable("d3d12_renderer") {
+
+  libs = [ "user32.lib", "Ole32.lib" ]
+
   sources = [
+    "comhelper.h",
+    "d3dx12.h",
+    "DXWindow.cpp",
+    "DXWindow.h",
     "main.cpp",
   ]
 }

@@ -356,7 +356,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 void DirectXBase::RegisterDXWindow() const
 {
-  WNDCLASSEX windowClass;// = { sizeof(WNDCLASSEX) };
+  WNDCLASSEXW windowClass;// = { sizeof(WNDCLASSEX) };
   windowClass.cbSize = sizeof(WNDCLASSEX);
   windowClass.style = CS_HREDRAW | CS_VREDRAW;
   windowClass.lpfnWndProc = WndProc;
@@ -393,7 +393,7 @@ HRESULT DirectXBase::CreateDXWindow()
   m_d2dFactory->GetDesktopDpi(&m_dpiX, &m_dpiY);
 
   // Create the window.
-  m_hwnd = CreateWindow(
+  m_hwnd = CreateWindowW(
     L"D2DDemoApp", // Class name
     L"Direct2D Demo App", // Window Name.
     WS_OVERLAPPEDWINDOW, // Style

@@ -77,6 +77,7 @@
     <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)
 $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)</NMakeCleanCommandLine>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d12_renderer).exe</NMakeOutput>
@@ -85,6 +86,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)
 $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)</NMakeCleanCommandLine>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d12_renderer).exe</NMakeOutput>
@@ -93,6 +95,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)
 $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)</NMakeCleanCommandLine>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d12_renderer).exe</NMakeOutput>
@@ -101,11 +104,18 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)
 $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)</NMakeCleanCommandLine>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\d3d12\DXWindow.cpp" />
     <ClCompile Include="..\..\d3d12\main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\d3d12\comhelper.h" />
+    <ClInclude Include="..\..\d3d12\d3dx12.h" />
+    <ClInclude Include="..\..\d3d12\DXWindow.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
