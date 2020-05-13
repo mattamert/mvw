@@ -1,13 +1,13 @@
 #include "DXWindow.h"
 
 #include <d3d12.h>
-#include <d3dx12.h>
 #include <dxgi1_4.h>
 #include <Windows.h>
 
 #include <string>
 
 #include "comhelper.h"
+#include "d3dx12.h"
 
 #define NUM_BACK_BUFFERS 2
 
@@ -110,6 +110,7 @@ void DXWindow::Initialize() {
   rtvViewDesc.Texture2D.MipSlice = 0;
   rtvViewDesc.Texture2D.PlaneSlice = 0;
 
+  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(renderTargetViewDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i)
   {
@@ -117,13 +118,17 @@ void DXWindow::Initialize() {
     HR(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
     UINT rtvDescriptorOffset = rtvDescriptorSize * i;
-    D3D12_CPU_DESCRIPTOR_HANDLE descriptorPtr;
-    descriptorPtr.ptr = size_t(renderTargetViewDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr) + size_t(rtvDescriptorOffset);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
 
     device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
   }
 
-  device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), );
+  // TODO: Don't know if this needs to be ID3D12GraphicsCommandList...
+  ComPtr<ID3D12CommandList> cl;
+  HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&cl)));
+
+  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+  rootSignatureDesc.
 }
 
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
