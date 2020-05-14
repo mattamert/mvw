@@ -2,7 +2,16 @@
 
 //#if defined(_DEBUG)
 #if 1
-#define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
+//#define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
+
+void HR(HRESULT hr)
+{
+  if (!SUCCEEDED(hr))
+  {
+    __debugbreak();
+    throw;
+  }
+}
 #else
 #define HR(hr) if (!SUCCEEDED(hr)) { throw; }
 #endif

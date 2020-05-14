@@ -1,6 +1,6 @@
 #include <Windows.h>
 
-#include "d3d12/DX12Base.h"
+#include "d3d12/DXWindow.h"
 
 #define IDT_TIMER1 1234
 

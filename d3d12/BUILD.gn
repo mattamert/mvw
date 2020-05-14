@@ -1,6 +1,7 @@
 executable("d3d12_renderer") {
+  libs = [ "user32.lib", "Ole32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib" ]
 
-  libs = [ "user32.lib", "Ole32.lib" ]
+  deps = [":d3d12_renderer_shaders"]
 
   sources = [
     "comhelper.h",
@@ -9,4 +10,12 @@ executable("d3d12_renderer") {
     "DXWindow.h",
     "main.cpp",
   ]
+}
+
+copy("d3d12_renderer_shaders") {
+  sources = [
+    "PassThroughShaders.hlsl",
+  ]
+
+  outputs = [ "$root_out_dir/{{source_file_part}}" ]
 }

@@ -117,6 +117,9 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\d3dx12.h" />
     <ClInclude Include="..\..\d3d12\DXWindow.h" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\..\d3d12\PassThroughShaders.hlsl" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

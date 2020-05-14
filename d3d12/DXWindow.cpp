@@ -1,6 +1,7 @@
 #include "DXWindow.h"
 
 #include <d3d12.h>
+#include <d3dcompiler.h>
 #include <dxgi1_4.h>
 #include <Windows.h>
 
@@ -47,9 +48,8 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 
 void DXWindow::Initialize() {
-  this->hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
-
   EnableDebugLayer();
+  this->hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
 
   Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
   HR(CreateDXGIFactory(IID_PPV_ARGS(&factory)));
@@ -71,7 +71,7 @@ void DXWindow::Initialize() {
   HR(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                     IID_PPV_ARGS(&commandAllocator)));
 
-  DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+  DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
   swapChainDesc.Width = 0;  // Use automatic sizing.
   swapChainDesc.Height = 0;
   swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;  // This is the most common swap chain format.
@@ -81,23 +81,23 @@ void DXWindow::Initialize() {
   swapChainDesc.SampleDesc.Quality = 0;
 
   swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-  swapChainDesc.BufferCount = 2;  // Use double-buffering to minimize latency.
+  swapChainDesc.BufferCount = NUM_BACK_BUFFERS;  // Use double-buffering to minimize latency.
   // swapChainDesc.Scaling = DXGI_SCALING_NONE;
   swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-  // swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-  // All Windows Store apps must use this SwapEffect.
-  swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;  // Bitblt.
+  // Note: All Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
+  // TODO: Maybe use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL?
+  swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  // Bitblt.
   swapChainDesc.Flags = 0;
 
   ComPtr<IDXGISwapChain1> swapChain;
-  HR(factory->CreateSwapChainForHwnd(device.Get(), this->hwnd, &swapChainDesc,
+  HR(factory->CreateSwapChainForHwnd(graphicsQueue.Get(), this->hwnd, &swapChainDesc,
                                      /*pFullscreenDesc*/ nullptr,
                                      /*pRestrictToOutput*/ nullptr, &swapChain));
 
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeap;
   rtvDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
   rtvDescriptorHeap.NumDescriptors = NUM_BACK_BUFFERS;
-  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   rtvDescriptorHeap.NodeMask = 0;
 
   ComPtr<ID3D12DescriptorHeap> renderTargetViewDescriptorHeap;
@@ -123,12 +123,68 @@ void DXWindow::Initialize() {
     device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
   }
 
-  // TODO: Don't know if this needs to be ID3D12GraphicsCommandList...
-  ComPtr<ID3D12CommandList> cl;
+  // TODO: Don't know if this needs to be ID3D12GraphicsCommandList...?
+  ComPtr<ID3D12GraphicsCommandList> cl;
   HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&cl)));
+  cl->Close();
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.
+  rootSignatureDesc.NumParameters = 0;
+  rootSignatureDesc.pParameters = nullptr;
+  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+  rootSignatureDesc.NumStaticSamplers = 0;
+  rootSignatureDesc.pStaticSamplers = nullptr;
+
+  ComPtr<ID3DBlob> rootSignatureBlob;
+  ComPtr<ID3DBlob> errorBlob;
+  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
+
+  ComPtr<ID3D12RootSignature> rootSignature;
+  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+
+#if defined(_DEBUG)
+  // Enable better shader debugging with the graphics debugging tools.
+  UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+  UINT compileFlags = 0;
+#endif
+
+  // TODO: Extract into own function, which will report the error message on failure.
+  ComPtr<ID3DBlob> vertexShader;
+  ComPtr<ID3DBlob> pixelShader;
+  ComPtr<ID3DBlob> compilationErrorBlob;
+  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &compilationErrorBlob));
+  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &compilationErrorBlob));
+
+  D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
+    { "POSITION", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
+    { "COLOR", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
+  };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC pso = {};
+  pso.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  pso.DepthStencilState.DepthEnable = FALSE; // ???
+  pso.DepthStencilState.StencilEnable = FALSE;
+  //pso.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+  pso.Flags = D3D12_PIPELINE_STATE_FLAGS::D3D12_PIPELINE_STATE_FLAG_NONE;
+  pso.InputLayout.pInputElementDescs = inputElements;
+  pso.InputLayout.NumElements = _countof(inputElements);
+  pso.NodeMask = 0;
+  pso.NumRenderTargets = 1;
+  pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  pso.pRootSignature = rootSignature.Get();
+  pso.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  pso.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  pso.SampleDesc.Count = 1;
+  pso.SampleDesc.Quality = 0;
+  pso.SampleMask = 0;
+  pso.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+  pso.VS.BytecodeLength = vertexShader->GetBufferSize();
+  pso.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+  pso.PS.BytecodeLength = pixelShader->GetBufferSize();
+
+  ComPtr<ID3D12PipelineState> pipelineState;
+  HR(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipelineState)));
 }
 
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
