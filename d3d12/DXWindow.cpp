@@ -166,13 +166,6 @@ void DXWindow::InitializePerPassObjects()
   HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
   HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&this->rootSignature)));
 
-#if defined(_DEBUG)
-  // Enable better shader debugging with the graphics debugging tools.
-  UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-  UINT compileFlags = 0;
-#endif
-
   HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &this->vertexShader));
   HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &this->pixelShader));
 
