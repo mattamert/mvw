@@ -43,6 +43,32 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
   return nullptr;
 }
 
+HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*/ID3DBlob** blob)
+{
+  if (!srcFile || !entryPoint || !profile || !blob)
+    return E_INVALIDARG;
+
+  UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined( DEBUG ) || defined( _DEBUG )
+  flags |= D3DCOMPILE_DEBUG;
+#endif
+
+  ID3DBlob* shaderBlob = nullptr;
+  ID3DBlob* errorBlob = nullptr;
+  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/nullptr, /*include*/nullptr, entryPoint, profile, flags, 0, &shaderBlob, &errorBlob);
+  if (FAILED(hr)) {
+    if (errorBlob) {
+      OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+      errorBlob->Release();
+    }
+    SafeRelease(&shaderBlob);
+    return hr;
+  }
+
+  *blob = shaderBlob;
+  return hr;
+}
+
 }  // namespace
 
 
@@ -147,10 +173,8 @@ void DXWindow::InitializePerPassObjects()
   UINT compileFlags = 0;
 #endif
 
-  // TODO: Extract into own function, which will report the error message on failure.
-  ComPtr<ID3DBlob> compilationErrorBlob;
-  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "VSMain", "vs_5_0", compileFlags, 0, &this->vertexShader, &compilationErrorBlob));
-  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "PSMain", "ps_5_0", compileFlags, 0, &this->pixelShader, &compilationErrorBlob));
+  HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &this->vertexShader));
+  HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &this->pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
     { "POSITION", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
