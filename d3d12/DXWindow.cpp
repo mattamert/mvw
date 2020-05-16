@@ -2,7 +2,6 @@
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
-#include <dxgi1_4.h>
 #include <Windows.h>
 
 #include <string>
@@ -51,35 +50,40 @@ void DXWindow::Initialize() {
   EnableDebugLayer();
   this->hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
 
-  Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
-  HR(CreateDXGIFactory(IID_PPV_ARGS(&factory)));
+  InitializePerDeviceObjects();
+  InitializePerWindowObjects();
+  InitializePerPassObjects();
+}
 
-  ComPtr<IDXGIAdapter> adapter = FindAdapter(factory.Get());
-  ComPtr<ID3D12Device> device;
-  HR(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+void DXWindow::InitializePerDeviceObjects() {
+  HR(CreateDXGIFactory(IID_PPV_ARGS(&this->factory)));
+
+  ComPtr<IDXGIAdapter> adapter = FindAdapter(this->factory.Get());
+  HR(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&this->device)));
 
   D3D12_COMMAND_QUEUE_DESC queueDesc;
   queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
   queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
   queueDesc.NodeMask = 0;
+  HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&this->directCommandQueue)));
 
-  ComPtr<ID3D12CommandQueue> graphicsQueue;
-  HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
-
-  ComPtr<ID3D12CommandAllocator> commandAllocator;
   HR(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                    IID_PPV_ARGS(&commandAllocator)));
+    IID_PPV_ARGS(&this->directCommandAllocator)));
 
+  HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->directCommandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&this->cl)));
+  this->cl->Close();
+}
+
+void DXWindow::InitializePerWindowObjects()
+{
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
   swapChainDesc.Width = 0;  // Use automatic sizing.
   swapChainDesc.Height = 0;
   swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;  // This is the most common swap chain format.
   swapChainDesc.Stereo = false;
-
   swapChainDesc.SampleDesc.Count = 1;  // Don't use multi-sampling.
   swapChainDesc.SampleDesc.Quality = 0;
-
   swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   swapChainDesc.BufferCount = NUM_BACK_BUFFERS;  // Use double-buffering to minimize latency.
   // swapChainDesc.Scaling = DXGI_SCALING_NONE;
@@ -89,20 +93,18 @@ void DXWindow::Initialize() {
   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  // Bitblt.
   swapChainDesc.Flags = 0;
 
-  ComPtr<IDXGISwapChain1> swapChain;
-  HR(factory->CreateSwapChainForHwnd(graphicsQueue.Get(), this->hwnd, &swapChainDesc,
-                                     /*pFullscreenDesc*/ nullptr,
-                                     /*pRestrictToOutput*/ nullptr, &swapChain));
+  HR(factory->CreateSwapChainForHwnd(this->directCommandQueue.Get(), this->hwnd, &swapChainDesc,
+    /*pFullscreenDesc*/ nullptr,
+    /*pRestrictToOutput*/ nullptr, &this->swapChain));
 
-  D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeap;
-  rtvDescriptorHeap.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  rtvDescriptorHeap.NumDescriptors = NUM_BACK_BUFFERS;
-  rtvDescriptorHeap.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  rtvDescriptorHeap.NodeMask = 0;
+  D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc;
+  rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+  rtvDescriptorHeapDesc.NumDescriptors = NUM_BACK_BUFFERS;
+  rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  rtvDescriptorHeapDesc.NodeMask = 0;
 
-  ComPtr<ID3D12DescriptorHeap> renderTargetViewDescriptorHeap;
-  HR(device->CreateDescriptorHeap(&rtvDescriptorHeap,
-                                  IID_PPV_ARGS(&renderTargetViewDescriptorHeap)));
+  HR(device->CreateDescriptorHeap(&rtvDescriptorHeapDesc,
+    IID_PPV_ARGS(&this->rtvDescriptorHeap)));
 
   D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
   rtvViewDesc.Format = swapChainDesc.Format;
@@ -110,24 +112,22 @@ void DXWindow::Initialize() {
   rtvViewDesc.Texture2D.MipSlice = 0;
   rtvViewDesc.Texture2D.PlaneSlice = 0;
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(renderTargetViewDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(this->rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i)
   {
     ComPtr<ID3D12Resource> backBuffer;
-    HR(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+    HR(this->swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
     UINT rtvDescriptorOffset = rtvDescriptorSize * i;
     CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
 
     device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
   }
+}
 
-  // TODO: Don't know if this needs to be ID3D12GraphicsCommandList...?
-  ComPtr<ID3D12GraphicsCommandList> cl;
-  HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&cl)));
-  cl->Close();
-
+void DXWindow::InitializePerPassObjects()
+{
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   rootSignatureDesc.NumParameters = 0;
   rootSignatureDesc.pParameters = nullptr;
@@ -138,9 +138,7 @@ void DXWindow::Initialize() {
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
   HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
-
-  ComPtr<ID3D12RootSignature> rootSignature;
-  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&this->rootSignature)));
 
 #if defined(_DEBUG)
   // Enable better shader debugging with the graphics debugging tools.
@@ -150,11 +148,9 @@ void DXWindow::Initialize() {
 #endif
 
   // TODO: Extract into own function, which will report the error message on failure.
-  ComPtr<ID3DBlob> vertexShader;
-  ComPtr<ID3DBlob> pixelShader;
   ComPtr<ID3DBlob> compilationErrorBlob;
-  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, &compilationErrorBlob));
-  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, &compilationErrorBlob));
+  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "VSMain", "vs_5_0", compileFlags, 0, &this->vertexShader, &compilationErrorBlob));
+  HR(D3DCompileFromFile(L"PassThroughShaders.hlsl", /*pDefines*/nullptr, /*pIncludes*/nullptr, "PSMain", "ps_5_0", compileFlags, 0, &this->pixelShader, &compilationErrorBlob));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
     { "POSITION", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
@@ -183,8 +179,7 @@ void DXWindow::Initialize() {
   pso.PS.pShaderBytecode = pixelShader->GetBufferPointer();
   pso.PS.BytecodeLength = pixelShader->GetBufferSize();
 
-  ComPtr<ID3D12PipelineState> pipelineState;
-  HR(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipelineState)));
+  HR(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&this->pipelineState)));
 }
 
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
