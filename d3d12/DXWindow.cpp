@@ -74,7 +74,7 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 void DXWindow::Initialize() {
   EnableDebugLayer();
-  this->hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
+  m_hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
 
   InitializePerDeviceObjects();
   InitializePerWindowObjects();
@@ -82,23 +82,23 @@ void DXWindow::Initialize() {
 }
 
 void DXWindow::InitializePerDeviceObjects() {
-  HR(CreateDXGIFactory(IID_PPV_ARGS(&this->factory)));
+  HR(CreateDXGIFactory(IID_PPV_ARGS(&m_factory)));
 
-  ComPtr<IDXGIAdapter> adapter = FindAdapter(this->factory.Get());
-  HR(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&this->device)));
+  ComPtr<IDXGIAdapter> adapter = FindAdapter(m_factory.Get());
+  HR(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device)));
 
   D3D12_COMMAND_QUEUE_DESC queueDesc;
   queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
   queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
   queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
   queueDesc.NodeMask = 0;
-  HR(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&this->directCommandQueue)));
+  HR(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_directCommandQueue)));
 
-  HR(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-    IID_PPV_ARGS(&this->directCommandAllocator)));
+  HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+    IID_PPV_ARGS(&m_directCommandAllocator)));
 
-  HR(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, this->directCommandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&this->cl)));
-  this->cl->Close();
+  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&m_cl)));
+  HR(m_cl->Close());
 }
 
 void DXWindow::InitializePerWindowObjects()
@@ -119,9 +119,9 @@ void DXWindow::InitializePerWindowObjects()
   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  // Bitblt.
   swapChainDesc.Flags = 0;
 
-  HR(factory->CreateSwapChainForHwnd(this->directCommandQueue.Get(), this->hwnd, &swapChainDesc,
+  HR(m_factory->CreateSwapChainForHwnd(m_directCommandQueue.Get(), m_hwnd, &swapChainDesc,
     /*pFullscreenDesc*/ nullptr,
-    /*pRestrictToOutput*/ nullptr, &this->swapChain));
+    /*pRestrictToOutput*/ nullptr, &m_swapChain));
 
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc;
   rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -129,8 +129,8 @@ void DXWindow::InitializePerWindowObjects()
   rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   rtvDescriptorHeapDesc.NodeMask = 0;
 
-  HR(device->CreateDescriptorHeap(&rtvDescriptorHeapDesc,
-    IID_PPV_ARGS(&this->rtvDescriptorHeap)));
+  HR(m_device->CreateDescriptorHeap(&rtvDescriptorHeapDesc,
+    IID_PPV_ARGS(&m_rtvDescriptorHeap)));
 
   D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
   rtvViewDesc.Format = swapChainDesc.Format;
@@ -138,20 +138,20 @@ void DXWindow::InitializePerWindowObjects()
   rtvViewDesc.Texture2D.MipSlice = 0;
   rtvViewDesc.Texture2D.PlaneSlice = 0;
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(this->rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-  UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  UINT rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i)
   {
     ComPtr<ID3D12Resource> backBuffer;
-    HR(this->swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+    HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
     UINT rtvDescriptorOffset = rtvDescriptorSize * i;
     CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
 
-    device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
+    m_device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
   }
 
-  HR(this->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&this->fence)));
+  HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 }
 
 void DXWindow::InitializePerPassObjects()
@@ -166,10 +166,10 @@ void DXWindow::InitializePerPassObjects()
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
   HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
-  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&this->rootSignature)));
+  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &this->vertexShader));
-  HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &this->pixelShader));
+  HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
+  HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
     { "POSITION", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
@@ -187,18 +187,18 @@ void DXWindow::InitializePerPassObjects()
   pso.NodeMask = 0;
   pso.NumRenderTargets = 1;
   pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  pso.pRootSignature = rootSignature.Get();
+  pso.pRootSignature = m_rootSignature.Get();
   pso.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   pso.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   pso.SampleDesc.Count = 1;
   pso.SampleDesc.Quality = 0;
   pso.SampleMask = 0;
-  pso.VS.pShaderBytecode = vertexShader->GetBufferPointer();
-  pso.VS.BytecodeLength = vertexShader->GetBufferSize();
-  pso.PS.pShaderBytecode = pixelShader->GetBufferPointer();
-  pso.PS.BytecodeLength = pixelShader->GetBufferSize();
+  pso.VS.pShaderBytecode = m_vertexShader->GetBufferPointer();
+  pso.VS.BytecodeLength = m_vertexShader->GetBufferSize();
+  pso.PS.pShaderBytecode = m_pixelShader->GetBufferPointer();
+  pso.PS.BytecodeLength = m_pixelShader->GetBufferSize();
 
-  HR(device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&this->pipelineState)));
+  HR(m_device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&m_pipelineState)));
 }
 
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
