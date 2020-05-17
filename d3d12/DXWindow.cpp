@@ -1,8 +1,8 @@
 #include "DXWindow.h"
 
+#include <Windows.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
-#include <Windows.h>
 
 #include <string>
 
@@ -34,8 +34,8 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
       break;
     }
 
-    if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0,
-                                    _uuidof(ID3D12Device), nullptr))) {
+    if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device),
+                                    nullptr))) {
       return adapter;
     }
   }
@@ -43,19 +43,19 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
   return nullptr;
 }
 
-HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*/ID3DBlob** blob)
-{
+HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*/ ID3DBlob** blob) {
   if (!srcFile || !entryPoint || !profile || !blob)
     return E_INVALIDARG;
 
   UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined( DEBUG ) || defined( _DEBUG )
+#if defined(DEBUG) || defined(_DEBUG)
   flags |= D3DCOMPILE_DEBUG;
 #endif
 
   ID3DBlob* shaderBlob = nullptr;
   ID3DBlob* errorBlob = nullptr;
-  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/nullptr, /*include*/nullptr, entryPoint, profile, flags, 0, &shaderBlob, &errorBlob);
+  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint,
+                                  profile, flags, 0, &shaderBlob, &errorBlob);
   if (FAILED(hr)) {
     if (errorBlob) {
       OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -70,7 +70,6 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 }
 
 }  // namespace
-
 
 void DXWindow::Initialize() {
   EnableDebugLayer();
@@ -95,14 +94,14 @@ void DXWindow::InitializePerDeviceObjects() {
   HR(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_directCommandQueue)));
 
   HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-    IID_PPV_ARGS(&m_directCommandAllocator)));
+                                      IID_PPV_ARGS(&m_directCommandAllocator)));
 
-  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(), /*pInitialState*/nullptr, IID_PPV_ARGS(&m_cl)));
+  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(),
+                                 /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
   HR(m_cl->Close());
 }
 
-void DXWindow::InitializePerWindowObjects()
-{
+void DXWindow::InitializePerWindowObjects() {
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
   swapChainDesc.Width = 0;  // Use automatic sizing.
   swapChainDesc.Height = 0;
@@ -120,8 +119,8 @@ void DXWindow::InitializePerWindowObjects()
   swapChainDesc.Flags = 0;
 
   HR(m_factory->CreateSwapChainForHwnd(m_directCommandQueue.Get(), m_hwnd, &swapChainDesc,
-    /*pFullscreenDesc*/ nullptr,
-    /*pRestrictToOutput*/ nullptr, &m_swapChain));
+                                       /*pFullscreenDesc*/ nullptr,
+                                       /*pRestrictToOutput*/ nullptr, &m_swapChain));
 
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc;
   rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -129,8 +128,7 @@ void DXWindow::InitializePerWindowObjects()
   rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   rtvDescriptorHeapDesc.NodeMask = 0;
 
-  HR(m_device->CreateDescriptorHeap(&rtvDescriptorHeapDesc,
-    IID_PPV_ARGS(&m_rtvDescriptorHeap)));
+  HR(m_device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(&m_rtvDescriptorHeap)));
 
   D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
   rtvViewDesc.Format = swapChainDesc.Format;
@@ -138,14 +136,14 @@ void DXWindow::InitializePerWindowObjects()
   rtvViewDesc.Texture2D.MipSlice = 0;
   rtvViewDesc.Texture2D.PlaneSlice = 0;
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-  UINT rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-  for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i)
-  {
+  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(
+      m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  UINT descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i) {
     ComPtr<ID3D12Resource> backBuffer;
     HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-    UINT rtvDescriptorOffset = rtvDescriptorSize * i;
+    UINT rtvDescriptorOffset = descriptorSize * i;
     CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
 
     m_device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
@@ -154,8 +152,7 @@ void DXWindow::InitializePerWindowObjects()
   HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
 }
 
-void DXWindow::InitializePerPassObjects()
-{
+void DXWindow::InitializePerPassObjects() {
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   rootSignatureDesc.NumParameters = 0;
   rootSignatureDesc.pParameters = nullptr;
@@ -165,22 +162,29 @@ void DXWindow::InitializePerPassObjects()
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
-  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
+                                 &rootSignatureBlob, &errorBlob));
+  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
+                                   rootSignatureBlob->GetBufferSize(),
+                                   IID_PPV_ARGS(&m_rootSignature)));
 
   HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
   HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
-    { "POSITION", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
-    { "COLOR", /*SemanticIndex*/0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/0, /*AlignedByteOffset*/0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, /*InstanceDataStepRate*/0 },
+      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"COLOR", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
   };
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC pso = {};
   pso.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-  pso.DepthStencilState.DepthEnable = FALSE; // ???
+  pso.DepthStencilState.DepthEnable = FALSE;  // ???
   pso.DepthStencilState.StencilEnable = FALSE;
-  //pso.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+  // pso.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
   pso.Flags = D3D12_PIPELINE_STATE_FLAGS::D3D12_PIPELINE_STATE_FLAG_NONE;
   pso.InputLayout.pInputElementDescs = inputElements;
   pso.InputLayout.NumElements = _countof(inputElements);
@@ -207,64 +211,59 @@ void DXWindow::DrawScene() {}
 
 void DXWindow::Present() {}
 
-
 // --------------------------- Window-handling code ---------------------------
 
-static LRESULT CALLBACK DXWindowWndProc(HWND hwnd,
-  UINT message,
-  WPARAM wParam,
-  LPARAM lParam) {
-  DXWindow* app =
-    reinterpret_cast<DXWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+  DXWindow* app = reinterpret_cast<DXWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
   switch (message) {
-  case WM_CREATE: {
-    LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
-    DXWindow* app = (DXWindow*)createStruct->lpCreateParams;
-    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
+    case WM_CREATE: {
+      LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
+      DXWindow* app = (DXWindow*)createStruct->lpCreateParams;
+      SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
 
-    SetTimer(hwnd,              // handle to main window
-      IDT_TIMER1,        // timer identifier
-      16,                // 10-second interval
-      (TIMERPROC)NULL);  // no timer callback
+      SetTimer(hwnd,              // handle to main window
+               IDT_TIMER1,        // timer identifier
+               16,                // 10-second interval
+               (TIMERPROC)NULL);  // no timer callback
 
-    return 0;
-  }
-
-  case WM_TIMER:
-    if (wParam == IDT_TIMER1) {
-      InvalidateRect(hwnd, nullptr, false);
+      return 0;
     }
-    return 0;
 
-  case WM_SIZE:
-    if (app != nullptr) {
-      UINT width = LOWORD(lParam);
-      UINT height = HIWORD(lParam);
-      app->OnResize(width, height);
-    }
-    return 0;
+    case WM_TIMER:
+      if (wParam == IDT_TIMER1) {
+        InvalidateRect(hwnd, nullptr, false);
+      }
+      return 0;
 
-  case WM_DISPLAYCHANGE:
-    if (app != nullptr) {
-      InvalidateRect(hwnd, nullptr, false);
-    }
-    return 0;
+    case WM_SIZE:
+      if (app != nullptr) {
+        UINT width = LOWORD(lParam);
+        UINT height = HIWORD(lParam);
+        app->OnResize(width, height);
+      }
+      return 0;
 
-  case WM_PAINT:
-    if (app != nullptr) {
-      //app->Animate();
-      app->DrawScene();
-      app->Present();
-      ValidateRect(hwnd, nullptr);
-    }
-    return 0;
+    case WM_DISPLAYCHANGE:
+      if (app != nullptr) {
+        InvalidateRect(hwnd, nullptr, false);
+      }
+      return 0;
 
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    return 0;
+    case WM_PAINT:
+      if (app != nullptr) {
+        // app->Animate();
+        app->DrawScene();
+        app->Present();
+        ValidateRect(hwnd, nullptr);
+      }
+      return 0;
 
-  default:
-    return DefWindowProc(hwnd, message, wParam, lParam);
+    case WM_DESTROY:
+      PostQuitMessage(0);
+      return 0;
+
+    default:
+      return DefWindowProc(hwnd, message, wParam, lParam);
   }
 }
 
@@ -296,19 +295,22 @@ void DXWindow::RegisterDXWindow() {
     HR(E_FAIL);
 }
 
-HWND DXWindow::CreateDXWindow(DXWindow* window, const std::wstring& windowName, int width, int height) {
+HWND DXWindow::CreateDXWindow(DXWindow* window,
+                              const std::wstring& windowName,
+                              int width,
+                              int height) {
   DXWindow::RegisterDXWindow();
-  HWND hwnd = CreateWindowW(g_className,           // Class name
-                            windowName.c_str(),    // Window Name.
-                            WS_OVERLAPPEDWINDOW,   // Style
-                            CW_USEDEFAULT,         // x
-                            CW_USEDEFAULT,         // y
-                            width,                 // Horiz size (pixels)
-                            height,                // Vert size (pixels)
-                            NULL,                  // parent window
-                            NULL,                  // menu
-                            HINST_THISCOMPONENT,   // Instance ...?
-                            window                 // lparam
+  HWND hwnd = CreateWindowW(g_className,          // Class name
+                            windowName.c_str(),   // Window Name.
+                            WS_OVERLAPPEDWINDOW,  // Style
+                            CW_USEDEFAULT,        // x
+                            CW_USEDEFAULT,        // y
+                            width,                // Horiz size (pixels)
+                            height,               // Vert size (pixels)
+                            NULL,                 // parent window
+                            NULL,                 // menu
+                            HINST_THISCOMPONENT,  // Instance ...?
+                            window                // lparam
   );
 
   if (hwnd) {
@@ -318,4 +320,3 @@ HWND DXWindow::CreateDXWindow(DXWindow* window, const std::wstring& windowName, 
 
   return hwnd;
 }
-
