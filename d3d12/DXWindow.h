@@ -22,6 +22,7 @@ private:
   // Per-window data.
   Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap;
+  Microsoft::WRL::ComPtr<ID3D12Fence> fence; // Is this actually per-window? // Should maybe also be 1 per back buffer?
 
   // Per-pass data.
   // TODO: Probably want a way to share pipeline states between passes?

@@ -150,6 +150,8 @@ void DXWindow::InitializePerWindowObjects()
 
     device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
   }
+
+  HR(this->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&this->fence)));
 }
 
 void DXWindow::InitializePerPassObjects()
