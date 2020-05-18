@@ -9,8 +9,6 @@
 #include "comhelper.h"
 #include "d3dx12.h"
 
-#define NUM_BACK_BUFFERS 2
-
 using Microsoft::WRL::ComPtr;
 
 #ifndef HINST_THISCOMPONENT
@@ -71,6 +69,9 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 }  // namespace
 
+DXWindow::DXWindow()
+    : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL), m_fenceValue(0u) {}
+
 void DXWindow::Initialize() {
   EnableDebugLayer();
   m_hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
@@ -78,6 +79,9 @@ void DXWindow::Initialize() {
   InitializePerDeviceObjects();
   InitializePerWindowObjects();
   InitializePerPassObjects();
+
+  WaitForGPUWork();
+  m_isInitialized = true;
 }
 
 void DXWindow::InitializePerDeviceObjects() {
@@ -114,13 +118,17 @@ void DXWindow::InitializePerWindowObjects() {
   // swapChainDesc.Scaling = DXGI_SCALING_NONE;
   swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
   // Note: All Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
-  // TODO: Maybe use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL?
+  // TODO: Maybe use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL? But only if we need to reuse pixels from
+  // the previous frame.
   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  // Bitblt.
   swapChainDesc.Flags = 0;
 
+  ComPtr<IDXGISwapChain1> swapChain;
   HR(m_factory->CreateSwapChainForHwnd(m_directCommandQueue.Get(), m_hwnd, &swapChainDesc,
                                        /*pFullscreenDesc*/ nullptr,
-                                       /*pRestrictToOutput*/ nullptr, &m_swapChain));
+                                       /*pRestrictToOutput*/ nullptr, &swapChain));
+
+  HR(swapChain.As(&m_swapChain));
 
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc;
   rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -140,16 +148,19 @@ void DXWindow::InitializePerWindowObjects() {
       m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   UINT descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i) {
-    ComPtr<ID3D12Resource> backBuffer;
-    HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+    HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_backBuffers[i])));
 
     UINT rtvDescriptorOffset = descriptorSize * i;
     CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
 
-    m_device->CreateRenderTargetView(backBuffer.Get(), &rtvViewDesc, descriptorPtr);
+    m_device->CreateRenderTargetView(m_backBuffers[i].Get(), &rtvViewDesc, descriptorPtr);
+    m_backBufferDescriptorHandles[i] = descriptorPtr;
   }
 
   HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+  m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/FALSE, /*bInitialState*/FALSE, nullptr);
+  if (m_fenceEvent == nullptr)
+    HR(HRESULT_FROM_WIN32(GetLastError()));
 }
 
 void DXWindow::InitializePerPassObjects() {
@@ -205,11 +216,47 @@ void DXWindow::InitializePerPassObjects() {
   HR(m_device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&m_pipelineState)));
 }
 
+void DXWindow::WaitForGPUWork() {
+  UINT64 fenceValue = m_fenceValue;
+  HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
+  m_fenceValue++;
+
+  if (m_fence->GetCompletedValue() < fenceValue)
+  {
+    m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent);
+    WaitForSingleObject(m_fenceEvent, INFINITE);
+  }
+  
+  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+}
+
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
 
-void DXWindow::DrawScene() {}
+void DXWindow::DrawScene() {
+  // TODO: Synchronization.
+  HR(m_directCommandAllocator->Reset());
+  HR(m_cl->Reset(m_directCommandAllocator.Get(), m_pipelineState.Get()));
 
-void DXWindow::Present() {}
+  float clearColor[4] = { 0.0, 1.0, 0.0, 0.0 };
+  m_cl->ClearRenderTargetView(m_backBufferDescriptorHandles[m_currentBackBufferIndex], clearColor,
+                              0, nullptr);
+
+  m_cl->Close();
+
+  ID3D12CommandList* cl[] = { m_cl.Get() };
+  m_directCommandQueue->ExecuteCommandLists(1, cl);
+  WaitForGPUWork();
+}
+
+void DXWindow::PresentImmediately() {
+  m_swapChain->Present(0, 0);
+}
+
+void DXWindow::PresentAndWait() {
+  m_swapChain->Present(1, 0); // This stalls the current thread for 1 vertical blank.
+
+  WaitForGPUWork();
+}
 
 // --------------------------- Window-handling code ---------------------------
 
@@ -236,7 +283,7 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       return 0;
 
     case WM_SIZE:
-      if (app != nullptr) {
+      if (app != nullptr && app->m_hwnd != NULL) {
         UINT width = LOWORD(lParam);
         UINT height = HIWORD(lParam);
         app->OnResize(width, height);
@@ -250,10 +297,10 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       return 0;
 
     case WM_PAINT:
-      if (app != nullptr) {
+      if (app != nullptr && app->m_hwnd != NULL) {
         // app->Animate();
         app->DrawScene();
-        app->Present();
+        app->PresentAndWait();
         ValidateRect(hwnd, nullptr);
       }
       return 0;

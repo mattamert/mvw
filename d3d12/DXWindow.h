@@ -5,8 +5,12 @@
 
 #include <string>
 
+#define NUM_BACK_BUFFERS 2
+
 class DXWindow {
  private:
+  friend LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
   bool m_isInitialized;
   HWND m_hwnd;
 
@@ -22,10 +26,15 @@ class DXWindow {
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
-  Microsoft::WRL::ComPtr<IDXGISwapChain1> m_swapChain;
+  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
+  UINT m_currentBackBufferIndex;
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
+
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
-  Microsoft::WRL::ComPtr<ID3D12Fence>
-      m_fence;  // Is this actually per-window? // Should maybe also be 1 per back buffer?
+  D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
+  Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
+  HANDLE m_fenceEvent;
+  UINT64 m_fenceValue;
 
   // Per-pass data.
   // TODO: Probably want a way to share pipeline states between passes?
@@ -39,12 +48,16 @@ class DXWindow {
   void InitializePerWindowObjects();
   void InitializePerPassObjects();
 
+  void WaitForGPUWork();
+
  public:
+  DXWindow();
   void Initialize();
 
   void OnResize(unsigned int width, unsigned int height);
   void DrawScene();
-  void Present();
+  void PresentImmediately();
+  void PresentAndWait();
 
  private:
   static void RegisterDXWindow();
