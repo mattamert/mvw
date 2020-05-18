@@ -4,6 +4,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 
+#include <cassert>
 #include <string>
 
 #include "comhelper.h"
@@ -82,6 +83,12 @@ void DXWindow::Initialize() {
 
   WaitForGPUWork();
   m_isInitialized = true;
+
+  ShowAndUpdateDXWindow(m_hwnd);
+}
+
+bool DXWindow::IsInitialized() const {
+  return m_isInitialized;
 }
 
 void DXWindow::InitializePerDeviceObjects() {
@@ -158,7 +165,7 @@ void DXWindow::InitializePerWindowObjects() {
   }
 
   HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-  m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/FALSE, /*bInitialState*/FALSE, nullptr);
+  m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/ FALSE, /*bInitialState*/ FALSE, nullptr);
   if (m_fenceEvent == nullptr)
     HR(HRESULT_FROM_WIN32(GetLastError()));
 }
@@ -221,29 +228,27 @@ void DXWindow::WaitForGPUWork() {
   HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
   m_fenceValue++;
 
-  if (m_fence->GetCompletedValue() < fenceValue)
-  {
+  if (m_fence->GetCompletedValue() < fenceValue) {
     m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent);
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
-  
+
   m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 void DXWindow::OnResize(unsigned int width, unsigned int height) {}
 
 void DXWindow::DrawScene() {
-  // TODO: Synchronization.
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), m_pipelineState.Get()));
 
-  float clearColor[4] = { 0.0, 1.0, 0.0, 0.0 };
+  float clearColor[4] = {0.0, 1.0, 0.0, 0.0};
   m_cl->ClearRenderTargetView(m_backBufferDescriptorHandles[m_currentBackBufferIndex], clearColor,
                               0, nullptr);
 
   m_cl->Close();
 
-  ID3D12CommandList* cl[] = { m_cl.Get() };
+  ID3D12CommandList* cl[] = {m_cl.Get()};
   m_directCommandQueue->ExecuteCommandLists(1, cl);
   WaitForGPUWork();
 }
@@ -253,7 +258,7 @@ void DXWindow::PresentImmediately() {
 }
 
 void DXWindow::PresentAndWait() {
-  m_swapChain->Present(1, 0); // This stalls the current thread for 1 vertical blank.
+  m_swapChain->Present(1, 0);  // This stalls the current thread for 1 vertical blank.
 
   WaitForGPUWork();
 }
@@ -283,7 +288,8 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       return 0;
 
     case WM_SIZE:
-      if (app != nullptr && app->m_hwnd != NULL) {
+      if (app != nullptr) {
+        assert(app->IsInitialized());
         UINT width = LOWORD(lParam);
         UINT height = HIWORD(lParam);
         app->OnResize(width, height);
@@ -297,7 +303,8 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       return 0;
 
     case WM_PAINT:
-      if (app != nullptr && app->m_hwnd != NULL) {
+      if (app != nullptr) {
+        assert(app->IsInitialized());
         // app->Animate();
         app->DrawScene();
         app->PresentAndWait();
@@ -360,10 +367,12 @@ HWND DXWindow::CreateDXWindow(DXWindow* window,
                             window                // lparam
   );
 
+  return hwnd;
+}
+
+void DXWindow::ShowAndUpdateDXWindow(HWND hwnd) {
   if (hwnd) {
     ShowWindow(hwnd, SW_SHOWNORMAL);
     UpdateWindow(hwnd);
   }
-
-  return hwnd;
 }

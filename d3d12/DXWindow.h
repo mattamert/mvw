@@ -9,8 +9,6 @@
 
 class DXWindow {
  private:
-  friend LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-
   bool m_isInitialized;
   HWND m_hwnd;
 
@@ -43,16 +41,10 @@ class DXWindow {
   Microsoft::WRL::ComPtr<ID3DBlob> m_vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
 
-  // Note: InitializePerDeviceObjects must be called before the other two.
-  void InitializePerDeviceObjects();
-  void InitializePerWindowObjects();
-  void InitializePerPassObjects();
-
-  void WaitForGPUWork();
-
  public:
   DXWindow();
   void Initialize();
+  bool IsInitialized() const;
 
   void OnResize(unsigned int width, unsigned int height);
   void DrawScene();
@@ -60,9 +52,18 @@ class DXWindow {
   void PresentAndWait();
 
  private:
+  // Note: InitializePerDeviceObjects must be called before the other two.
+  void InitializePerDeviceObjects();
+  void InitializePerWindowObjects();
+  void InitializePerPassObjects();
+
+  void WaitForGPUWork();
+
+  // Window-handling functions.
   static void RegisterDXWindow();
   static HWND CreateDXWindow(DXWindow* window,
                              const std::wstring& windowName,
                              int width,
                              int height);
+  static void ShowAndUpdateDXWindow(HWND hwnd);
 };
