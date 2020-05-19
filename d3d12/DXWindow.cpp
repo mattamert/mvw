@@ -207,8 +207,8 @@ void DXWindow::InitializePerPassObjects() {
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout = { inputElements, _countof(inputElements) };
   psoDesc.pRootSignature = m_rootSignature.Get();
-  psoDesc.VS = { reinterpret_cast<UINT8*>(m_vertexShader->GetBufferPointer()), m_vertexShader->GetBufferSize() };
-  psoDesc.PS = { reinterpret_cast<UINT8*>(m_pixelShader->GetBufferPointer()), m_pixelShader->GetBufferSize() };
+  psoDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
+  psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   psoDesc.DepthStencilState.DepthEnable = FALSE;
@@ -268,10 +268,43 @@ void DXWindow::WaitForGPUWork() {
 }
 
 void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
-  //if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
-  //  m_clientWidth = clientWidth;
-  //  m_clientHeight = clientHeight;
-  //}
+  if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
+    WaitForGPUWork();
+
+    m_clientWidth = clientWidth;
+    m_clientHeight = clientHeight;
+
+    for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
+      m_backBuffers[i].Reset();
+    }
+
+    HR(m_swapChain->ResizeBuffers(0, m_clientWidth, m_clientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+    HR(m_swapChain->GetDesc1(&swapChainDesc));
+
+    D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
+    rtvViewDesc.Format = swapChainDesc.Format;
+    rtvViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    rtvViewDesc.Texture2D.MipSlice = 0;
+    rtvViewDesc.Texture2D.PlaneSlice = 0;
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(
+        m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+    UINT descriptorSize =
+        m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i) {
+      HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_backBuffers[i])));
+
+      UINT rtvDescriptorOffset = descriptorSize * i;
+      CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
+
+      m_device->CreateRenderTargetView(m_backBuffers[i].Get(), &rtvViewDesc, descriptorPtr);
+      m_backBufferDescriptorHandles[i] = descriptorPtr;
+    }
+
+    m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+  }
 }
 
 void DXWindow::DrawScene() {
@@ -294,7 +327,7 @@ void DXWindow::DrawScene() {
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
   m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
-  float clearColor[4] = {0.0, 0.0, 0.0, 1.0};
+  float clearColor[4] = {0.1, 0.2, 0.3, 1.0};
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_cl->IASetVertexBuffers(0, 1, &m_vertexBufferView);
