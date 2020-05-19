@@ -77,9 +77,15 @@ void DXWindow::Initialize() {
   EnableDebugLayer();
   m_hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
 
+  RECT clientArea;
+  GetClientRect(m_hwnd, &clientArea);
+  m_clientWidth = static_cast<unsigned int>(clientArea.right);
+  m_clientHeight = static_cast<unsigned int>(clientArea.bottom);
+
   InitializePerDeviceObjects();
   InitializePerWindowObjects();
   InitializePerPassObjects();
+  InitializeAppObjects();
 
   WaitForGPUWork();
   m_isInitialized = true;
@@ -189,7 +195,7 @@ void DXWindow::InitializePerPassObjects() {
   HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
   HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
 
-  D3D12_INPUT_ELEMENT_DESC inputElements[2] = {
+  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
        /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        /*InstanceDataStepRate*/ 0},
@@ -223,6 +229,38 @@ void DXWindow::InitializePerPassObjects() {
   HR(m_device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&m_pipelineState)));
 }
 
+struct VertexData {
+  float position[3];
+  float color[3];
+};
+
+void DXWindow::InitializeAppObjects() {
+  // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
+  VertexData vertices[3] = {
+    { -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f },
+    {  0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f },
+    {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f },
+  };
+
+  const unsigned int bufferSize = sizeof(vertices);
+
+  CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_UPLOAD);
+  CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+  HR(m_device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+                                       D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                       IID_PPV_ARGS(&m_vertexBuffer)));
+
+  uint8_t* mappedRegion;
+  CD3DX12_RANGE readRange(0, 0);
+  HR(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  memcpy(mappedRegion, vertices, bufferSize);
+  m_vertexBuffer->Unmap(0, nullptr);
+
+  m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+  m_vertexBufferView.SizeInBytes = bufferSize;
+  m_vertexBufferView.StrideInBytes = sizeof(VertexData);
+}
+
 void DXWindow::WaitForGPUWork() {
   UINT64 fenceValue = m_fenceValue;
   HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
@@ -236,15 +274,38 @@ void DXWindow::WaitForGPUWork() {
   m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void DXWindow::OnResize(unsigned int width, unsigned int height) {}
+void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
+  if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
+    m_clientWidth = clientWidth;
+    m_clientHeight = clientHeight;
+  }
+}
 
 void DXWindow::DrawScene() {
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), m_pipelineState.Get()));
 
-  float clearColor[4] = {0.0, 1.0, 0.0, 0.0};
+  m_cl->SetGraphicsRootSignature(m_rootSignature.Get());
+
+  CD3DX12_VIEWPORT clientAreaViewport(0.0f, 0.0f, static_cast<float>(m_clientWidth),
+                                      static_cast<float>(m_clientHeight));
+  CD3DX12_RECT scissorRect(0, 0, m_clientWidth, m_clientHeight);
+  m_cl->RSSetViewports(1, &clientAreaViewport);
+  m_cl->RSSetScissorRects(1, &scissorRect);
+
+  CD3DX12_RESOURCE_BARRIER rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_backBuffers[m_currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT,
+      D3D12_RESOURCE_STATE_RENDER_TARGET);
+  m_cl->ResourceBarrier(1, &rtvResourceBarrier);
+
+  float clearColor[4] = {0.0, 0.0, 0.0, 1.0};
   m_cl->ClearRenderTargetView(m_backBufferDescriptorHandles[m_currentBackBufferIndex], clearColor,
                               0, nullptr);
+
+  rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_backBuffers[m_currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
+      D3D12_RESOURCE_STATE_PRESENT);
+  m_cl->ResourceBarrier(1, &rtvResourceBarrier);
 
   m_cl->Close();
 
@@ -354,9 +415,12 @@ HWND DXWindow::CreateDXWindow(DXWindow* window,
                               int width,
                               int height) {
   DXWindow::RegisterDXWindow();
+
+  // TODO: Look into how to remove the title bar.
+  long windowStyle = WS_OVERLAPPEDWINDOW;
   HWND hwnd = CreateWindowW(g_className,          // Class name
                             windowName.c_str(),   // Window Name.
-                            WS_OVERLAPPEDWINDOW,  // Style
+                            windowStyle,         // Style
                             CW_USEDEFAULT,        // x
                             CW_USEDEFAULT,        // y
                             width,                // Horiz size (pixels)

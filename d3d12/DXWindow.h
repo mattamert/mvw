@@ -34,12 +34,19 @@ class DXWindow {
   HANDLE m_fenceEvent;
   UINT64 m_fenceValue;
 
+  unsigned int m_clientWidth;
+  unsigned int m_clientHeight;
+
   // Per-pass data.
   // TODO: Probably want a way to share pipeline states between passes?
   Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
   Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
   Microsoft::WRL::ComPtr<ID3DBlob> m_vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
+
+  // App data.
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
+  D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
  public:
   DXWindow();
@@ -56,6 +63,7 @@ class DXWindow {
   void InitializePerDeviceObjects();
   void InitializePerWindowObjects();
   void InitializePerPassObjects();
+  void InitializeAppObjects();
 
   void WaitForGPUWork();
 
