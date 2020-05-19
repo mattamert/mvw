@@ -122,7 +122,7 @@ void DXWindow::InitializePerWindowObjects() {
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
   swapChainDesc.Width = 0;  // Use automatic sizing.
   swapChainDesc.Height = 0;
-  swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;  // This is the most common swap chain format.
+  swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;  // This is the most common swap chain format.
   swapChainDesc.Stereo = false;
   swapChainDesc.SampleDesc.Count = 1;  // Don't use multi-sampling.
   swapChainDesc.SampleDesc.Quality = 0;
@@ -200,33 +200,26 @@ void DXWindow::InitializePerPassObjects() {
        /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        /*InstanceDataStepRate*/ 0},
       {"COLOR", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
-       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        /*InstanceDataStepRate*/ 0},
   };
 
-  D3D12_GRAPHICS_PIPELINE_STATE_DESC pso = {};
-  pso.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-  pso.DepthStencilState.DepthEnable = FALSE;  // ???
-  pso.DepthStencilState.StencilEnable = FALSE;
-  // pso.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-  pso.Flags = D3D12_PIPELINE_STATE_FLAGS::D3D12_PIPELINE_STATE_FLAG_NONE;
-  pso.InputLayout.pInputElementDescs = inputElements;
-  pso.InputLayout.NumElements = _countof(inputElements);
-  pso.NodeMask = 0;
-  pso.NumRenderTargets = 1;
-  pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  pso.pRootSignature = m_rootSignature.Get();
-  pso.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  pso.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-  pso.SampleDesc.Count = 1;
-  pso.SampleDesc.Quality = 0;
-  pso.SampleMask = 0;
-  pso.VS.pShaderBytecode = m_vertexShader->GetBufferPointer();
-  pso.VS.BytecodeLength = m_vertexShader->GetBufferSize();
-  pso.PS.pShaderBytecode = m_pixelShader->GetBufferPointer();
-  pso.PS.BytecodeLength = m_pixelShader->GetBufferSize();
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = { inputElements, _countof(inputElements) };
+  psoDesc.pRootSignature = m_rootSignature.Get();
+  psoDesc.VS = { reinterpret_cast<UINT8*>(m_vertexShader->GetBufferPointer()), m_vertexShader->GetBufferSize() };
+  psoDesc.PS = { reinterpret_cast<UINT8*>(m_pixelShader->GetBufferPointer()), m_pixelShader->GetBufferSize() };
+  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.DepthStencilState.DepthEnable = FALSE;
+  psoDesc.DepthStencilState.StencilEnable = FALSE;
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 1;
+  psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  psoDesc.SampleDesc.Count = 1;
 
-  HR(m_device->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&m_pipelineState)));
+  HR(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 }
 
 struct VertexData {
@@ -237,9 +230,9 @@ struct VertexData {
 void DXWindow::InitializeAppObjects() {
   // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
   VertexData vertices[3] = {
-    { -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f },
     {  0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f },
     {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f },
+    { -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f },
   };
 
   const unsigned int bufferSize = sizeof(vertices);
@@ -275,13 +268,16 @@ void DXWindow::WaitForGPUWork() {
 }
 
 void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
-  if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
-    m_clientWidth = clientWidth;
-    m_clientHeight = clientHeight;
-  }
+  //if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
+  //  m_clientWidth = clientWidth;
+  //  m_clientHeight = clientHeight;
+  //}
 }
 
 void DXWindow::DrawScene() {
+  ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
+
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), m_pipelineState.Get()));
 
@@ -294,17 +290,18 @@ void DXWindow::DrawScene() {
   m_cl->RSSetScissorRects(1, &scissorRect);
 
   CD3DX12_RESOURCE_BARRIER rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      m_backBuffers[m_currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT,
-      D3D12_RESOURCE_STATE_RENDER_TARGET);
+      backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
+  m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
   float clearColor[4] = {0.0, 0.0, 0.0, 1.0};
-  m_cl->ClearRenderTargetView(m_backBufferDescriptorHandles[m_currentBackBufferIndex], clearColor,
-                              0, nullptr);
+  m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+  m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  m_cl->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+  m_cl->DrawInstanced(3, 1, 0, 0);
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      m_backBuffers[m_currentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
-      D3D12_RESOURCE_STATE_PRESENT);
+      backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
 
   m_cl->Close();
