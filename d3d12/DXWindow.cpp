@@ -205,10 +205,10 @@ void DXWindow::InitializePerPassObjects() {
   };
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-  psoDesc.InputLayout = { inputElements, _countof(inputElements) };
+  psoDesc.InputLayout = {inputElements, _countof(inputElements)};
   psoDesc.pRootSignature = m_rootSignature.Get();
-  psoDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
-  psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
+  psoDesc.VS = {m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize()};
+  psoDesc.PS = {m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize()};
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   psoDesc.DepthStencilState.DepthEnable = FALSE;
@@ -230,9 +230,9 @@ struct VertexData {
 void DXWindow::InitializeAppObjects() {
   // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
   VertexData vertices[3] = {
-    {  0.0f,  0.5f, 0.0f,  0.0f, 1.0f, 0.0f },
-    {  0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f },
-    { -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f },
+      {0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
+      {0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
+      {-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
   };
 
   const unsigned int bufferSize = sizeof(vertices);
@@ -450,7 +450,7 @@ HWND DXWindow::CreateDXWindow(DXWindow* window,
   long windowStyle = WS_OVERLAPPEDWINDOW;
   HWND hwnd = CreateWindowW(g_className,          // Class name
                             windowName.c_str(),   // Window Name.
-                            windowStyle,         // Style
+                            windowStyle,          // Style
                             CW_USEDEFAULT,        // x
                             CW_USEDEFAULT,        // y
                             width,                // Horiz size (pixels)
