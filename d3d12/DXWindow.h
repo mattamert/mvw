@@ -20,7 +20,7 @@ class DXWindow {
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_directCommandQueue;
   // Command allocators and command lists especially should be split into something different, as
   // there should be 1 per render thread.
-  Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
+  Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocators[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
@@ -32,7 +32,8 @@ class DXWindow {
   D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
   HANDLE m_fenceEvent;
-  UINT64 m_fenceValue;
+  uint64_t m_fenceValues[NUM_BACK_BUFFERS];
+  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since the fences start out at 0.
 
   unsigned int m_clientWidth;
   unsigned int m_clientHeight;
@@ -55,8 +56,7 @@ class DXWindow {
 
   void OnResize(unsigned int width, unsigned int height);
   void DrawScene();
-  void PresentImmediately();
-  void PresentAndWait();
+  void PresentAndSignal();
 
  private:
   // Note: InitializePerDeviceObjects must be called before the other two.
@@ -65,7 +65,8 @@ class DXWindow {
   void InitializePerPassObjects();
   void InitializeAppObjects();
 
-  void WaitForGPUWork();
+  void FlushGPUWork();
+  void WaitForNextFrame();
 
   // Window-handling functions.
   static void RegisterDXWindow();

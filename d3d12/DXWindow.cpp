@@ -71,7 +71,10 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 }  // namespace
 
 DXWindow::DXWindow()
-    : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL), m_fenceValue(0u) {}
+    : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
+  for (int i = 0; i < NUM_BACK_BUFFERS; ++i)
+    m_fenceValues[i] = 0;
+}
 
 void DXWindow::Initialize() {
   EnableDebugLayer();
@@ -87,7 +90,8 @@ void DXWindow::Initialize() {
   InitializePerPassObjects();
   InitializeAppObjects();
 
-  WaitForGPUWork();
+  FlushGPUWork();
+  
   m_isInitialized = true;
 
   ShowAndUpdateDXWindow(m_hwnd);
@@ -110,10 +114,13 @@ void DXWindow::InitializePerDeviceObjects() {
   queueDesc.NodeMask = 0;
   HR(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_directCommandQueue)));
 
-  HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                      IID_PPV_ARGS(&m_directCommandAllocator)));
+  for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
+    HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                        IID_PPV_ARGS(&m_directCommandAllocators[i])));
+  }
 
-  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(),
+  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                 m_directCommandAllocators[m_currentBackBufferIndex].Get(),
                                  /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
   HR(m_cl->Close());
 }
@@ -254,22 +261,9 @@ void DXWindow::InitializeAppObjects() {
   m_vertexBufferView.StrideInBytes = sizeof(VertexData);
 }
 
-void DXWindow::WaitForGPUWork() {
-  UINT64 fenceValue = m_fenceValue;
-  HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
-  m_fenceValue++;
-
-  if (m_fence->GetCompletedValue() < fenceValue) {
-    m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent);
-    WaitForSingleObject(m_fenceEvent, INFINITE);
-  }
-
-  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
-}
-
 void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
   if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
-    WaitForGPUWork();
+    FlushGPUWork();
 
     m_clientWidth = clientWidth;
     m_clientHeight = clientHeight;
@@ -308,11 +302,13 @@ void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
 }
 
 void DXWindow::DrawScene() {
+  WaitForNextFrame();
+
   ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
 
-  HR(m_directCommandAllocator->Reset());
-  HR(m_cl->Reset(m_directCommandAllocator.Get(), m_pipelineState.Get()));
+  HR(m_directCommandAllocators[m_currentBackBufferIndex]->Reset());
+  HR(m_cl->Reset(m_directCommandAllocators[m_currentBackBufferIndex].Get(), m_pipelineState.Get()));
 
   m_cl->SetGraphicsRootSignature(m_rootSignature.Get());
 
@@ -341,17 +337,36 @@ void DXWindow::DrawScene() {
 
   ID3D12CommandList* cl[] = {m_cl.Get()};
   m_directCommandQueue->ExecuteCommandLists(1, cl);
-  WaitForGPUWork();
 }
 
-void DXWindow::PresentImmediately() {
-  m_swapChain->Present(0, 0);
+void DXWindow::PresentAndSignal() {
+  m_swapChain->Present(1, 0);
+
+  m_fenceValues[m_currentBackBufferIndex] = m_nextFenceValue;
+  HR(m_directCommandQueue->Signal(m_fence.Get(), m_nextFenceValue));
+  ++m_nextFenceValue;
+
+  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void DXWindow::PresentAndWait() {
-  m_swapChain->Present(1, 0);  // This stalls the current thread for 1 vertical blank.
+void DXWindow::WaitForNextFrame() {
+  if (m_fence->GetCompletedValue() < m_fenceValues[m_currentBackBufferIndex]) {
+    HR(m_fence->SetEventOnCompletion(m_fenceValues[m_currentBackBufferIndex], m_fenceEvent));
+    WaitForSingleObject(m_fenceEvent, INFINITE);
+  }
+}
 
-  WaitForGPUWork();
+void DXWindow::FlushGPUWork() {
+  UINT64 fenceValue = m_nextFenceValue;
+  HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
+  ++m_nextFenceValue;
+
+  if (m_fence->GetCompletedValue() < fenceValue) {
+    HR(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
+    WaitForSingleObject(m_fenceEvent, INFINITE);
+  }
+
+  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 // --------------------------- Window-handling code ---------------------------
@@ -398,7 +413,7 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
         assert(app->IsInitialized());
         // app->Animate();
         app->DrawScene();
-        app->PresentAndWait();
+        app->PresentAndSignal();
         ValidateRect(hwnd, nullptr);
       }
       return 0;
