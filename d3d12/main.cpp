@@ -1,14 +1,27 @@
 #include <Windows.h>
 
+#include <cassert>
+
 #include "d3d12/DXWindow.h"
 
 #define USE_CONSOLE_SUBSYSTEM
 
-void RunMessageLoop() {
-  MSG msg;
-  while (GetMessage(&msg, nullptr, 0, 0)) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
+void RunMessageLoop(DXWindow* app) {
+  assert(app->IsInitialized());
+
+  while (true) {
+    MSG msg;
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) == TRUE) {
+      if (msg.message == WM_QUIT) {
+        return;
+      }
+
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+
+    app->DrawScene();
+    app->PresentAndSignal();
   }
 }
 
@@ -21,7 +34,7 @@ int main() {
     {
       DXWindow app;
       app.Initialize();
-      RunMessageLoop();
+      RunMessageLoop(&app);
     }
     CoUninitialize();
   }

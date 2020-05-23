@@ -17,8 +17,6 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 #endif
 
-#define IDT_TIMER1 1234
-
 namespace {
 void EnableDebugLayer() {
   ComPtr<ID3D12Debug> debugController;
@@ -378,20 +376,8 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
       DXWindow* app = (DXWindow*)createStruct->lpCreateParams;
       SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
-
-      SetTimer(hwnd,              // handle to main window
-               IDT_TIMER1,        // timer identifier
-               16,                // 10-second interval
-               (TIMERPROC)NULL);  // no timer callback
-
       return 0;
     }
-
-    case WM_TIMER:
-      if (wParam == IDT_TIMER1) {
-        InvalidateRect(hwnd, nullptr, false);
-      }
-      return 0;
 
     case WM_SIZE:
       if (app != nullptr) {
@@ -409,13 +395,7 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       return 0;
 
     case WM_PAINT:
-      if (app != nullptr) {
-        assert(app->IsInitialized());
-        // app->Animate();
-        app->DrawScene();
-        app->PresentAndSignal();
-        ValidateRect(hwnd, nullptr);
-      }
+      ValidateRect(hwnd, nullptr);
       return 0;
 
     case WM_DESTROY:
