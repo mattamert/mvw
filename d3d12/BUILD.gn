@@ -4,6 +4,8 @@ executable("d3d12_renderer") {
   deps = [":d3d12_renderer_shaders"]
 
   sources = [
+    "clock.h",
+    "clock.cpp",
     "comhelper.h",
     "d3dx12.h",
     "DXWindow.cpp",

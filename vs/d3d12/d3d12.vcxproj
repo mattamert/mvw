@@ -109,10 +109,12 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\d3d12\clock.cpp" />
     <ClCompile Include="..\..\d3d12\DXWindow.cpp" />
     <ClCompile Include="..\..\d3d12\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\d3d12\clock.h" />
     <ClInclude Include="..\..\d3d12\comhelper.h" />
     <ClInclude Include="..\..\d3d12\d3dx12.h" />
     <ClInclude Include="..\..\d3d12\DXWindow.h" />

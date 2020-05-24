@@ -13,6 +13,9 @@
     <ClCompile Include="..\..\d3d12\DXWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\d3d12\clock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\comhelper.h">
@@ -22,6 +25,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\DXWindow.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\d3d12\clock.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
