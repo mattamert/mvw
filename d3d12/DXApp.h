@@ -76,5 +76,5 @@ class DXApp {
                              const std::wstring& windowName,
                              int width,
                              int height);
-  static void ShowAndUpdateDXWindow(HWND hwnd);
+  static void ShowDXWindow(HWND hwnd);
 };

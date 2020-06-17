@@ -93,7 +93,7 @@ void DXApp::Initialize() {
   
   m_isInitialized = true;
 
-  ShowAndUpdateDXWindow(m_hwnd);
+  ShowDXWindow(m_hwnd);
 }
 
 bool DXApp::IsInitialized() const {
@@ -389,16 +389,6 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       }
       return 0;
 
-    case WM_DISPLAYCHANGE:
-      if (app != nullptr) {
-        InvalidateRect(hwnd, nullptr, false);
-      }
-      return 0;
-
-    case WM_PAINT:
-      ValidateRect(hwnd, nullptr);
-      return 0;
-
     case WM_DESTROY:
       PostQuitMessage(0);
       return 0;
@@ -460,9 +450,8 @@ HWND DXApp::CreateDXWindow(DXApp* window,
   return hwnd;
 }
 
-void DXApp::ShowAndUpdateDXWindow(HWND hwnd) {
+void DXApp::ShowDXWindow(HWND hwnd) {
   if (hwnd) {
     ShowWindow(hwnd, SW_SHOWNORMAL);
-    UpdateWindow(hwnd);
   }
 }
