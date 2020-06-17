@@ -8,8 +8,8 @@ executable("d3d12_renderer") {
     "clock.cpp",
     "comhelper.h",
     "d3dx12.h",
-    "DXWindow.cpp",
-    "DXWindow.h",
+    "DXApp.cpp",
+    "DXApp.h",
     "main.cpp",
   ]
 }

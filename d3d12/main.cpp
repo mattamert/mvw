@@ -2,7 +2,7 @@
 
 #include <cassert>
 
-#include "d3d12/DXWindow.h"
+#include "DXApp.h"
 
 #define USE_CONSOLE_SUBSYSTEM
 

@@ -10,10 +10,10 @@
     <ClCompile Include="..\..\d3d12\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\d3d12\DXWindow.cpp">
+    <ClCompile Include="..\..\d3d12\clock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\d3d12\clock.cpp">
+    <ClCompile Include="..\..\d3d12\DXApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -24,10 +24,10 @@
     <ClInclude Include="..\..\d3d12\d3dx12.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\d3d12\DXWindow.h">
+    <ClInclude Include="..\..\d3d12\clock.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\d3d12\clock.h">
+    <ClInclude Include="..\..\d3d12\DXApp.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
