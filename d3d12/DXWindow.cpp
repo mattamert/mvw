@@ -73,8 +73,6 @@ DXWindow::DXWindow()
     : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i)
     m_fenceValues[i] = 0;
-
-  m_clock.Start();
 }
 
 void DXWindow::Initialize() {
@@ -342,12 +340,6 @@ void DXWindow::DrawScene() {
 
 void DXWindow::PresentAndSignal() {
   m_swapChain->Present(1, 0);
-
-  uint64_t now = m_clock.GetTotalElapsed();
-  uint64_t elapsed = now - m_previousTime;
-  double elapsedMs = static_cast<double>(elapsed) / static_cast<double>(1000);
-  std::cout << elapsedMs << std::endl;
-  m_previousTime = now;
 
   m_fenceValues[m_currentBackBufferIndex] = m_nextFenceValue;
   HR(m_directCommandQueue->Signal(m_fence.Get(), m_nextFenceValue));

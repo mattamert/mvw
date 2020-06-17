@@ -11,9 +11,6 @@
 
 class DXWindow {
  private:
-  Clock m_clock;
-  uint64_t m_previousTime;
-
   bool m_isInitialized;
   HWND m_hwnd;
 
