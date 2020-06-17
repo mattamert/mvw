@@ -9,7 +9,7 @@
 
 #define NUM_BACK_BUFFERS 2
 
-class DXWindow {
+class DXApp {
  private:
   bool m_isInitialized;
   HWND m_hwnd;
@@ -52,7 +52,7 @@ class DXWindow {
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
  public:
-  DXWindow();
+  DXApp();
   void Initialize();
   bool IsInitialized() const;
 
@@ -72,7 +72,7 @@ class DXWindow {
 
   // Window-handling functions.
   static void RegisterDXWindow();
-  static HWND CreateDXWindow(DXWindow* window,
+  static HWND CreateDXWindow(DXApp* window,
                              const std::wstring& windowName,
                              int width,
                              int height);

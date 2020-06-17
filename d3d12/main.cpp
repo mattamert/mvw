@@ -6,7 +6,7 @@
 
 #define USE_CONSOLE_SUBSYSTEM
 
-void RunMessageLoop(DXWindow* app) {
+void RunMessageLoop(DXApp* app) {
   assert(app->IsInitialized());
 
   // TODO: This isn't ideal. What's happening is that this loop is running as fast as possible.
@@ -42,7 +42,7 @@ int main() {
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
-      DXWindow app;
+      DXApp app;
       app.Initialize();
       RunMessageLoop(&app);
     }
@@ -62,7 +62,7 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/,
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
-      DXWindow app;
+      DXApp app;
       app.Initialize();
       RunMessageLoop();
     }

@@ -69,15 +69,15 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 }  // namespace
 
-DXWindow::DXWindow()
+DXApp::DXApp()
     : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i)
     m_fenceValues[i] = 0;
 }
 
-void DXWindow::Initialize() {
+void DXApp::Initialize() {
   EnableDebugLayer();
-  m_hwnd = CreateDXWindow(this, L"DXWindow", 640, 480);
+  m_hwnd = CreateDXWindow(this, L"DXApp", 640, 480);
 
   RECT clientArea;
   GetClientRect(m_hwnd, &clientArea);
@@ -96,11 +96,11 @@ void DXWindow::Initialize() {
   ShowAndUpdateDXWindow(m_hwnd);
 }
 
-bool DXWindow::IsInitialized() const {
+bool DXApp::IsInitialized() const {
   return m_isInitialized;
 }
 
-void DXWindow::InitializePerDeviceObjects() {
+void DXApp::InitializePerDeviceObjects() {
   HR(CreateDXGIFactory(IID_PPV_ARGS(&m_factory)));
 
   ComPtr<IDXGIAdapter> adapter = FindAdapter(m_factory.Get());
@@ -124,7 +124,7 @@ void DXWindow::InitializePerDeviceObjects() {
   HR(m_cl->Close());
 }
 
-void DXWindow::InitializePerWindowObjects() {
+void DXApp::InitializePerWindowObjects() {
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
   swapChainDesc.Width = 0;  // Use automatic sizing.
   swapChainDesc.Height = 0;
@@ -182,7 +182,7 @@ void DXWindow::InitializePerWindowObjects() {
     HR(HRESULT_FROM_WIN32(GetLastError()));
 }
 
-void DXWindow::InitializePerPassObjects() {
+void DXApp::InitializePerPassObjects() {
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   rootSignatureDesc.NumParameters = 0;
   rootSignatureDesc.pParameters = nullptr;
@@ -233,7 +233,7 @@ struct VertexData {
   float color[3];
 };
 
-void DXWindow::InitializeAppObjects() {
+void DXApp::InitializeAppObjects() {
   // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
   VertexData vertices[3] = {
       {0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
@@ -260,7 +260,7 @@ void DXWindow::InitializeAppObjects() {
   m_vertexBufferView.StrideInBytes = sizeof(VertexData);
 }
 
-void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
+void DXApp::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
   if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
     FlushGPUWork();
 
@@ -300,7 +300,7 @@ void DXWindow::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
   }
 }
 
-void DXWindow::DrawScene() {
+void DXApp::DrawScene() {
   WaitForNextFrame();
 
   ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
@@ -338,7 +338,7 @@ void DXWindow::DrawScene() {
   m_directCommandQueue->ExecuteCommandLists(1, cl);
 }
 
-void DXWindow::PresentAndSignal() {
+void DXApp::PresentAndSignal() {
   m_swapChain->Present(1, 0);
 
   m_fenceValues[m_currentBackBufferIndex] = m_nextFenceValue;
@@ -348,14 +348,14 @@ void DXWindow::PresentAndSignal() {
   m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-void DXWindow::WaitForNextFrame() {
+void DXApp::WaitForNextFrame() {
   if (m_fence->GetCompletedValue() < m_fenceValues[m_currentBackBufferIndex]) {
     HR(m_fence->SetEventOnCompletion(m_fenceValues[m_currentBackBufferIndex], m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
 }
 
-void DXWindow::FlushGPUWork() {
+void DXApp::FlushGPUWork() {
   UINT64 fenceValue = m_nextFenceValue;
   HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
   ++m_nextFenceValue;
@@ -371,11 +371,11 @@ void DXWindow::FlushGPUWork() {
 // --------------------------- Window-handling code ---------------------------
 
 static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-  DXWindow* app = reinterpret_cast<DXWindow*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  DXApp* app = reinterpret_cast<DXApp*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
   switch (message) {
     case WM_CREATE: {
       LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
-      DXWindow* app = (DXWindow*)createStruct->lpCreateParams;
+      DXApp* app = (DXApp*)createStruct->lpCreateParams;
       SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
       return 0;
     }
@@ -408,9 +408,9 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
   }
 }
 
-static const wchar_t* g_className = L"DXWindow";
+static const wchar_t* g_className = L"DXApp";
 
-void DXWindow::RegisterDXWindow() {
+void DXApp::RegisterDXWindow() {
   WNDCLASSEXW windowClass;  // = { sizeof(WNDCLASSEX) };
   windowClass.cbSize = sizeof(WNDCLASSEX);
   windowClass.style = CS_HREDRAW | CS_VREDRAW;
@@ -436,11 +436,11 @@ void DXWindow::RegisterDXWindow() {
     HR(E_FAIL);
 }
 
-HWND DXWindow::CreateDXWindow(DXWindow* window,
+HWND DXApp::CreateDXWindow(DXApp* window,
                               const std::wstring& windowName,
                               int width,
                               int height) {
-  DXWindow::RegisterDXWindow();
+  DXApp::RegisterDXWindow();
 
   // TODO: Look into how to remove the title bar.
   long windowStyle = WS_OVERLAPPEDWINDOW;
@@ -460,7 +460,7 @@ HWND DXWindow::CreateDXWindow(DXWindow* window,
   return hwnd;
 }
 
-void DXWindow::ShowAndUpdateDXWindow(HWND hwnd) {
+void DXApp::ShowAndUpdateDXWindow(HWND hwnd) {
   if (hwnd) {
     ShowWindow(hwnd, SW_SHOWNORMAL);
     UpdateWindow(hwnd);
