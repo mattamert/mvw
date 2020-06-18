@@ -4,15 +4,21 @@
 #include <wrl/client.h>  // For ComPtr
 
 #include <string>
+#include <memory>
+#include <queue>
 
 #include "clock.h"
 
 #define NUM_BACK_BUFFERS 2
 
+class MessageQueue;
+
 class DXApp {
  private:
   bool m_isInitialized;
   HWND m_hwnd;
+
+  std::shared_ptr<MessageQueue> m_messageQueue;
 
   // Per-device data.
   // TODO: These should really be abstracted into their own class, as they are not exactly bound to
@@ -53,12 +59,15 @@ class DXApp {
 
  public:
   DXApp();
-  void Initialize();
+  void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue);
   bool IsInitialized() const;
 
   void OnResize(unsigned int width, unsigned int height);
   void DrawScene();
   void PresentAndSignal();
+
+  static void RunRenderLoop(std::unique_ptr<DXApp> app);
+  bool HandleMessages();
 
  private:
   // Note: InitializePerDeviceObjects must be called before the other two.
@@ -69,12 +78,4 @@ class DXApp {
 
   void FlushGPUWork();
   void WaitForNextFrame();
-
-  // Window-handling functions.
-  static void RegisterDXWindow();
-  static HWND CreateDXWindow(DXApp* window,
-                             const std::wstring& windowName,
-                             int width,
-                             int height);
-  static void ShowDXWindow(HWND hwnd);
 };

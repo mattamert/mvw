@@ -10,6 +10,7 @@
 
 #include "comhelper.h"
 #include "d3dx12.h"
+#include "MessageQueue.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -75,9 +76,11 @@ DXApp::DXApp()
     m_fenceValues[i] = 0;
 }
 
-void DXApp::Initialize() {
+void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
+  m_hwnd = hwnd;
+  m_messageQueue = std::move(messageQueue);
+
   EnableDebugLayer();
-  m_hwnd = CreateDXWindow(this, L"DXApp", 640, 480);
 
   RECT clientArea;
   GetClientRect(m_hwnd, &clientArea);
@@ -92,8 +95,6 @@ void DXApp::Initialize() {
   FlushGPUWork();
   
   m_isInitialized = true;
-
-  ShowDXWindow(m_hwnd);
 }
 
 bool DXApp::IsInitialized() const {
@@ -368,90 +369,35 @@ void DXApp::FlushGPUWork() {
   m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
-// --------------------------- Window-handling code ---------------------------
-
-static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-  DXApp* app = reinterpret_cast<DXApp*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
-  switch (message) {
-    case WM_CREATE: {
-      LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
-      DXApp* app = (DXApp*)createStruct->lpCreateParams;
-      SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)app);
-      return 0;
+bool DXApp::HandleMessages() {
+  std::queue<MSG> messages = m_messageQueue->Flush();
+  while (!messages.empty()) {
+    const MSG& msg = messages.front();
+    switch (msg.message) {
+      case WM_SIZE: {
+        UINT width = LOWORD(msg.lParam);
+        UINT height = HIWORD(msg.lParam);
+        OnResize(width, height);
+        break;
+      }
+      case WM_DESTROY:
+        return true;
     }
 
-    case WM_SIZE:
-      if (app != nullptr) {
-        assert(app->IsInitialized());
-        UINT width = LOWORD(lParam);
-        UINT height = HIWORD(lParam);
-        app->OnResize(width, height);
-      }
-      return 0;
-
-    case WM_DESTROY:
-      PostQuitMessage(0);
-      return 0;
-
-    default:
-      return DefWindowProc(hwnd, message, wParam, lParam);
+    messages.pop();
   }
+  return false;
 }
 
-static const wchar_t* g_className = L"DXApp";
+void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
+  assert(app->IsInitialized());
 
-void DXApp::RegisterDXWindow() {
-  WNDCLASSEXW windowClass;  // = { sizeof(WNDCLASSEX) };
-  windowClass.cbSize = sizeof(WNDCLASSEX);
-  windowClass.style = CS_HREDRAW | CS_VREDRAW;
-  windowClass.lpfnWndProc = DXWindowWndProc;
-  windowClass.cbClsExtra = 0;
-  windowClass.cbWndExtra = sizeof(LONG_PTR);
-  windowClass.hInstance = HINST_THISCOMPONENT;
-  windowClass.hbrBackground = NULL;
-  windowClass.lpszMenuName = NULL;
-  windowClass.hCursor = LoadCursor(NULL, IDI_APPLICATION);
-  windowClass.lpszClassName = g_className;
-  windowClass.hIcon = NULL;
-  windowClass.hIconSm = NULL;
+  while (true)
+  {
+    bool shouldQuit = app->HandleMessages();
+    if (shouldQuit) break;
 
-  ATOM result = RegisterClassExW(&windowClass);
-  DWORD err = GetLastError();
-
-  // This is so that we don't have to necessarily keep track of whether or not
-  // we've called this function before.
-  // We just assume that this will be the only function in this process that
-  // will register a window class with this class name.
-  if (result == 0 && err != ERROR_CLASS_ALREADY_EXISTS)
-    HR(E_FAIL);
-}
-
-HWND DXApp::CreateDXWindow(DXApp* window,
-                              const std::wstring& windowName,
-                              int width,
-                              int height) {
-  DXApp::RegisterDXWindow();
-
-  // TODO: Look into how to remove the title bar.
-  long windowStyle = WS_OVERLAPPEDWINDOW;
-  HWND hwnd = CreateWindowW(g_className,          // Class name
-                            windowName.c_str(),   // Window Name.
-                            windowStyle,          // Style
-                            CW_USEDEFAULT,        // x
-                            CW_USEDEFAULT,        // y
-                            width,                // Horiz size (pixels)
-                            height,               // Vert size (pixels)
-                            NULL,                 // parent window
-                            NULL,                 // menu
-                            HINST_THISCOMPONENT,  // Instance ...?
-                            window                // lparam
-  );
-
-  return hwnd;
-}
-
-void DXApp::ShowDXWindow(HWND hwnd) {
-  if (hwnd) {
-    ShowWindow(hwnd, SW_SHOWNORMAL);
+    app->DrawScene();
+    app->PresentAndSignal();
   }
 }

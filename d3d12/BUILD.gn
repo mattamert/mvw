@@ -11,6 +11,8 @@ executable("d3d12_renderer") {
     "DXApp.cpp",
     "DXApp.h",
     "main.cpp",
+    "MessageQueue.h",
+    "MessageQueue.cpp",
   ]
 }
 
