@@ -350,6 +350,8 @@ void DXApp::PresentAndSignal() {
 }
 
 void DXApp::WaitForNextFrame() {
+  // Future note: To wait on the present, use a Waitable swap chain
+  // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains
   if (m_fence->GetCompletedValue() < m_fenceValues[m_currentBackBufferIndex]) {
     HR(m_fence->SetEventOnCompletion(m_fenceValues[m_currentBackBufferIndex], m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);
