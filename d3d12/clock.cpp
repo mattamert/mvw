@@ -32,11 +32,13 @@ uint64_t Clock::GetTotalElapsedNanoseconds() {
 }
 
 double Clock::GetTotalElapsedMilliseconds() {
-  return static_cast<double>(GetTotalElapsedNanoseconds()) / static_cast<double>(nanosecondsInMilliseconds);
+  return static_cast<double>(GetTotalElapsedNanoseconds()) /
+         static_cast<double>(nanosecondsInMilliseconds);
 }
 
 double Clock::GetTotalElapsedSeconds() {
-  return static_cast<double>(GetTotalElapsedNanoseconds()) / static_cast<double>(nanosecondsInSeconds);
+  return static_cast<double>(GetTotalElapsedNanoseconds()) /
+         static_cast<double>(nanosecondsInSeconds);
 }
 
 void Clock::Stop() {

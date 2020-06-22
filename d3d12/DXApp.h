@@ -5,9 +5,9 @@
 #include <dxgi1_4.h>
 #include <wrl/client.h>  // For ComPtr
 
-#include <string>
 #include <memory>
 #include <queue>
+#include <string>
 
 #include "clock.h"
 
