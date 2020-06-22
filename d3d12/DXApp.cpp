@@ -5,12 +5,12 @@
 #include <d3dcompiler.h>
 
 #include <cassert>
-#include <string>
 #include <iostream>
+#include <string>
 
+#include "MessageQueue.h"
 #include "comhelper.h"
 #include "d3dx12.h"
-#include "MessageQueue.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -70,8 +70,7 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 }  // namespace
 
-DXApp::DXApp()
-    : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
+DXApp::DXApp() : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i)
     m_fenceValues[i] = 0;
 }
@@ -93,7 +92,7 @@ void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   InitializeAppObjects();
 
   FlushGPUWork();
-  
+
   m_isInitialized = true;
 }
 
@@ -394,10 +393,10 @@ bool DXApp::HandleMessages() {
 void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
   assert(app->IsInitialized());
 
-  while (true)
-  {
+  while (true) {
     bool shouldQuit = app->HandleMessages();
-    if (shouldQuit) break;
+    if (shouldQuit)
+      break;
 
     app->DrawScene();
     app->PresentAndSignal();
