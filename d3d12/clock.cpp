@@ -2,6 +2,9 @@
 
 #include <cassert>
 
+constexpr uint64_t nanosecondsInMilliseconds = 1000000;
+constexpr uint64_t nanosecondsInSeconds = 1000000000;
+
 void Clock::Start() {
   if (m_isRunning)
     return;
@@ -12,7 +15,7 @@ void Clock::Start() {
   m_isRunning = true;
 }
 
-uint64_t Clock::GetTotalElapsed() {
+uint64_t Clock::GetTotalElapsedNanoseconds() {
   if (!m_isRunning)
     return 0ull;
 
@@ -26,6 +29,14 @@ uint64_t Clock::GetTotalElapsed() {
   elapsed /= m_frequency.QuadPart;
 
   return elapsed;
+}
+
+double Clock::GetTotalElapsedMilliseconds() {
+  return static_cast<double>(GetTotalElapsedNanoseconds()) / static_cast<double>(nanosecondsInMilliseconds);
+}
+
+double Clock::GetTotalElapsedSeconds() {
+  return static_cast<double>(GetTotalElapsedNanoseconds()) / static_cast<double>(nanosecondsInSeconds);
 }
 
 void Clock::Stop() {

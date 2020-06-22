@@ -13,6 +13,7 @@ public:
   void Start();
   void Stop();
 
-  // Returns the delta in nanoseconds.
-  uint64_t GetTotalElapsed();
+  uint64_t GetTotalElapsedNanoseconds();
+  double GetTotalElapsedMilliseconds();
+  double GetTotalElapsedSeconds();
 };
