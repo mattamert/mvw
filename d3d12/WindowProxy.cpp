@@ -33,6 +33,10 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
     case WM_DESTROY:
       if (handler != nullptr) {
         handler->PushMessage(msg);
+
+        // NOTE: Make sure that the render thread finishes up before we destroy the window.
+        // If we don't, then there are issues with the render thread flushing the command queue.
+        handler->WaitForRenderThreadToFinish(); 
       }
 
       PostQuitMessage(0);

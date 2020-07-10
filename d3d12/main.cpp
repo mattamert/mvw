@@ -31,7 +31,6 @@ int main() {
       WindowProxy proxy;
       proxy.Initialize();
       RunMessageLoop();
-      proxy.WaitForRenderThreadToFinish();
     }
     CoUninitialize();
   }
