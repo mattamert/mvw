@@ -4,7 +4,7 @@
 #if 1
 //#define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
 
-void HR(HRESULT hr)
+inline void HR(HRESULT hr)
 {
   if (!SUCCEEDED(hr))
   {

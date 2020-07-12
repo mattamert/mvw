@@ -9,7 +9,9 @@
 #include <queue>
 #include <string>
 
-#include "clock.h"
+#include "d3d12/Camera.h"
+#include "d3d12/clock.h"
+#include "d3d12/PerFrameAllocator.h"
 
 #define NUM_BACK_BUFFERS 2
 
@@ -58,6 +60,9 @@ class DXApp {
   // App data.
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+
+  PinholeCamera m_camera;
+  PerFrameAllocator m_bufferAllocator;
 
  public:
   DXApp();

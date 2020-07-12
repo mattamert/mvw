@@ -109,22 +109,27 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\d3d12\Camera.cpp" />
     <ClCompile Include="..\..\d3d12\clock.cpp" />
     <ClCompile Include="..\..\d3d12\DXApp.cpp" />
     <ClCompile Include="..\..\d3d12\main.cpp" />
     <ClCompile Include="..\..\d3d12\MessageQueue.cpp" />
+    <ClCompile Include="..\..\d3d12\PerFrameAllocator.cpp" />
     <ClCompile Include="..\..\d3d12\WindowProxy.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\d3d12\Camera.h" />
     <ClInclude Include="..\..\d3d12\clock.h" />
     <ClInclude Include="..\..\d3d12\comhelper.h" />
     <ClInclude Include="..\..\d3d12\d3dx12.h" />
     <ClInclude Include="..\..\d3d12\DXApp.h" />
     <ClInclude Include="..\..\d3d12\MessageQueue.h" />
+    <ClInclude Include="..\..\d3d12\PerFrameAllocator.h" />
     <ClInclude Include="..\..\d3d12\WindowProxy.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\PassThroughShaders.hlsl" />
+    <FxCompile Include="..\..\d3d12\SimpleCameraAndPositioning.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

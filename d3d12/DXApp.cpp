@@ -183,6 +183,36 @@ void DXApp::InitializePerWindowObjects() {
 }
 
 void DXApp::InitializePerPassObjects() {
+#if 1
+  D3D12_ROOT_PARAMETER parameters[2];
+  parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+  parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+  parameters[0].Descriptor.ShaderRegister = 0;
+  parameters[0].Descriptor.RegisterSpace = 0;
+
+  parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+  parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+  parameters[1].Descriptor.ShaderRegister = 1;
+  parameters[1].Descriptor.RegisterSpace = 0;
+
+  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+  rootSignatureDesc.NumParameters = 2;
+  rootSignatureDesc.pParameters = parameters;
+  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+  rootSignatureDesc.NumStaticSamplers = 0;
+  rootSignatureDesc.pStaticSamplers = nullptr;
+
+  ComPtr<ID3DBlob> rootSignatureBlob;
+  ComPtr<ID3DBlob> errorBlob;
+  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
+    &rootSignatureBlob, &errorBlob));
+  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
+    rootSignatureBlob->GetBufferSize(),
+    IID_PPV_ARGS(&m_rootSignature)));
+
+  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
+  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
+#else
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   rootSignatureDesc.NumParameters = 0;
   rootSignatureDesc.pParameters = nullptr;
@@ -200,6 +230,7 @@ void DXApp::InitializePerPassObjects() {
 
   HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
   HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
+#endif
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -258,6 +289,11 @@ void DXApp::InitializeAppObjects() {
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = bufferSize;
   m_vertexBufferView.StrideInBytes = sizeof(VertexData);
+
+  // Initialize the camera location.
+  m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
+  m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_camera.position_ = DirectX::XMFLOAT4(0, 0, -2, 1);
 }
 
 void DXApp::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
@@ -297,6 +333,8 @@ void DXApp::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
     }
 
     m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+    m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
   }
 }
 
@@ -310,6 +348,35 @@ void DXApp::DrawScene() {
   HR(m_cl->Reset(m_directCommandAllocators[m_currentBackBufferIndex].Get(), m_pipelineState.Get()));
 
   m_cl->SetGraphicsRootSignature(m_rootSignature.Get());
+
+  // Set up the constant buffer for the per-frame data.
+  DirectX::XMMATRIX viewPerspective = m_camera.GenerateViewPerspectiveTransform();
+  //DirectX::XMMATRIX viewPerspective = DirectX::XMMatrixIdentity();
+  DirectX::XMFLOAT4X4 viewPerspective4x4;
+  DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
+  ComPtr<ID3D12Resource> cameraConstantBuffer = m_bufferAllocator.AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(viewPerspective4x4));
+
+  uint8_t* mappedRegion;
+  CD3DX12_RANGE readRange(0, 0);
+  HR(cameraConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  memcpy(mappedRegion, &viewPerspective4x4, sizeof(viewPerspective4x4));
+  cameraConstantBuffer->Unmap(0, nullptr);
+
+  m_cl->SetGraphicsRootConstantBufferView(0, cameraConstantBuffer->GetGPUVirtualAddress());
+
+  // Set up the constant buffer for the per-object data.
+  DirectX::XMMATRIX identity = DirectX::XMMatrixIdentity();
+  DirectX::XMFLOAT4X4 identity4x4;
+  DirectX::XMStoreFloat4x4(&identity4x4, identity);
+  ComPtr<ID3D12Resource> objectConstantBuffer = m_bufferAllocator.AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(identity4x4));
+
+  HR(objectConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  memcpy(mappedRegion, &identity4x4, sizeof(identity4x4));
+  objectConstantBuffer->Unmap(0, nullptr);
+
+  m_cl->SetGraphicsRootConstantBufferView(1, objectConstantBuffer->GetGPUVirtualAddress());
+
+  // Resume scheduled programming.
 
   CD3DX12_VIEWPORT clientAreaViewport(0.0f, 0.0f, static_cast<float>(m_clientWidth),
                                       static_cast<float>(m_clientHeight));
@@ -355,6 +422,8 @@ void DXApp::WaitForNextFrame() {
     HR(m_fence->SetEventOnCompletion(m_fenceValues[m_currentBackBufferIndex], m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
+
+  m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {
@@ -368,6 +437,7 @@ void DXApp::FlushGPUWork() {
   }
 
   m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+  m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 bool DXApp::HandleMessages() {
@@ -401,4 +471,6 @@ void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
     app->DrawScene();
     app->PresentAndSignal();
   }
+
+  app->FlushGPUWork();
 }
