@@ -42,32 +42,6 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
   return nullptr;
 }
 
-HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*/ ID3DBlob** blob) {
-  if (!srcFile || !entryPoint || !profile || !blob)
-    return E_INVALIDARG;
-
-  UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-  flags |= D3DCOMPILE_DEBUG;
-#endif
-
-  ID3DBlob* shaderBlob = nullptr;
-  ID3DBlob* errorBlob = nullptr;
-  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint,
-                                  profile, flags, 0, &shaderBlob, &errorBlob);
-  if (FAILED(hr)) {
-    if (errorBlob) {
-      OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-      errorBlob->Release();
-    }
-    SafeRelease(&shaderBlob);
-    return hr;
-  }
-
-  *blob = shaderBlob;
-  return hr;
-}
-
 }  // namespace
 
 DXApp::DXApp() : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
@@ -134,8 +108,8 @@ void DXApp::InitializePerWindowObjects() {
   swapChainDesc.SampleDesc.Quality = 0;
   swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   swapChainDesc.BufferCount = NUM_BACK_BUFFERS;  // Use double-buffering to minimize latency.
-  // swapChainDesc.Scaling = DXGI_SCALING_NONE;
-  swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+  swapChainDesc.Scaling = DXGI_SCALING_NONE;
+  //swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
   // Note: All Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL.
   // TODO: Maybe use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL? But only if we need to reuse pixels from
   // the previous frame.
@@ -183,90 +157,12 @@ void DXApp::InitializePerWindowObjects() {
 }
 
 void DXApp::InitializePerPassObjects() {
-#if 1
-  D3D12_ROOT_PARAMETER parameters[2];
-  parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-  parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-  parameters[0].Descriptor.ShaderRegister = 0;
-  parameters[0].Descriptor.RegisterSpace = 0;
-
-  parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-  parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-  parameters[1].Descriptor.ShaderRegister = 1;
-  parameters[1].Descriptor.RegisterSpace = 0;
-
-  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.NumParameters = 2;
-  rootSignatureDesc.pParameters = parameters;
-  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-  rootSignatureDesc.NumStaticSamplers = 0;
-  rootSignatureDesc.pStaticSamplers = nullptr;
-
-  ComPtr<ID3DBlob> rootSignatureBlob;
-  ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-    &rootSignatureBlob, &errorBlob));
-  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
-    rootSignatureBlob->GetBufferSize(),
-    IID_PPV_ARGS(&m_rootSignature)));
-
-  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
-#else
-  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.NumParameters = 0;
-  rootSignatureDesc.pParameters = nullptr;
-  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-  rootSignatureDesc.NumStaticSamplers = 0;
-  rootSignatureDesc.pStaticSamplers = nullptr;
-
-  ComPtr<ID3DBlob> rootSignatureBlob;
-  ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                 &rootSignatureBlob, &errorBlob));
-  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
-                                   rootSignatureBlob->GetBufferSize(),
-                                   IID_PPV_ARGS(&m_rootSignature)));
-
-  HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
-#endif
-
-  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
-      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
-       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-       /*InstanceDataStepRate*/ 0},
-      {"COLOR", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
-       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-       /*InstanceDataStepRate*/ 0},
-  };
-
-  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-  psoDesc.InputLayout = {inputElements, _countof(inputElements)};
-  psoDesc.pRootSignature = m_rootSignature.Get();
-  psoDesc.VS = {m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize()};
-  psoDesc.PS = {m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize()};
-  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-  psoDesc.DepthStencilState.DepthEnable = FALSE;
-  psoDesc.DepthStencilState.StencilEnable = FALSE;
-  psoDesc.SampleMask = UINT_MAX;
-  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  psoDesc.NumRenderTargets = 1;
-  psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-  psoDesc.SampleDesc.Count = 1;
-
-  HR(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+  m_colorPass.Initialize(m_device.Get());
 }
-
-struct VertexData {
-  float position[3];
-  float color[3];
-};
 
 void DXApp::InitializeAppObjects() {
   // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
-  VertexData vertices[3] = {
+  ColorPass::VertexData vertices[3] = {
       {0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
       {0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
       {-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
@@ -288,7 +184,7 @@ void DXApp::InitializeAppObjects() {
 
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = bufferSize;
-  m_vertexBufferView.StrideInBytes = sizeof(VertexData);
+  m_vertexBufferView.StrideInBytes = sizeof(ColorPass::VertexData);
 
   // Initialize the camera location.
   m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
@@ -296,62 +192,61 @@ void DXApp::InitializeAppObjects() {
   m_camera.position_ = DirectX::XMFLOAT4(0, 0, -2, 1);
 }
 
-void DXApp::OnResize(unsigned int clientWidth, unsigned int clientHeight) {
-  if (m_clientWidth != clientWidth || m_clientHeight != clientHeight) {
-    FlushGPUWork();
+void DXApp::OnResize() {
+  FlushGPUWork();
 
-    m_clientWidth = clientWidth;
-    m_clientHeight = clientHeight;
-
-    for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
-      m_backBuffers[i].Reset();
-    }
-
-    HR(m_swapChain->ResizeBuffers(0, m_clientWidth, m_clientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
-    HR(m_swapChain->GetDesc1(&swapChainDesc));
-
-    D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
-    rtvViewDesc.Format = swapChainDesc.Format;
-    rtvViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-    rtvViewDesc.Texture2D.MipSlice = 0;
-    rtvViewDesc.Texture2D.PlaneSlice = 0;
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(
-        m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-    UINT descriptorSize =
-        m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i) {
-      HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_backBuffers[i])));
-
-      UINT rtvDescriptorOffset = descriptorSize * i;
-      CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
-
-      m_device->CreateRenderTargetView(m_backBuffers[i].Get(), &rtvViewDesc, descriptorPtr);
-      m_backBufferDescriptorHandles[i] = descriptorPtr;
-    }
-
-    m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-    m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
+  for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
+    m_backBuffers[i].Reset();
   }
+
+  HR(m_swapChain->ResizeBuffers(0, m_clientWidth, m_clientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+
+  DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+  HR(m_swapChain->GetDesc1(&swapChainDesc));
+
+  D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
+  rtvViewDesc.Format = swapChainDesc.Format;
+  rtvViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+  rtvViewDesc.Texture2D.MipSlice = 0;
+  rtvViewDesc.Texture2D.PlaneSlice = 0;
+
+  CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorHeapStart(
+      m_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  UINT descriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  for (size_t i = 0; i < NUM_BACK_BUFFERS; ++i) {
+    HR(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_backBuffers[i])));
+
+    UINT rtvDescriptorOffset = descriptorSize * i;
+    CD3DX12_CPU_DESCRIPTOR_HANDLE descriptorPtr(descriptorHeapStart, rtvDescriptorOffset);
+
+    m_device->CreateRenderTargetView(m_backBuffers[i].Get(), &rtvViewDesc, descriptorPtr);
+    m_backBufferDescriptorHandles[i] = descriptorPtr;
+  }
+
+  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+  m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
+
+  m_isResizePending = false;
 }
 
 void DXApp::DrawScene() {
-  WaitForNextFrame();
+  if (m_isResizePending)
+    OnResize();
+  else
+    WaitForNextFrame();
 
   ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
 
   HR(m_directCommandAllocators[m_currentBackBufferIndex]->Reset());
-  HR(m_cl->Reset(m_directCommandAllocators[m_currentBackBufferIndex].Get(), m_pipelineState.Get()));
+  HR(m_cl->Reset(m_directCommandAllocators[m_currentBackBufferIndex].Get(), nullptr));
 
-  m_cl->SetGraphicsRootSignature(m_rootSignature.Get());
+  m_cl->SetPipelineState(m_colorPass.GetPipelineState());
+  m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
   DirectX::XMMATRIX viewPerspective = m_camera.GenerateViewPerspectiveTransform();
-  //DirectX::XMMATRIX viewPerspective = DirectX::XMMatrixIdentity();
   DirectX::XMFLOAT4X4 viewPerspective4x4;
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
   ComPtr<ID3D12Resource> cameraConstantBuffer = m_bufferAllocator.AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(viewPerspective4x4));
@@ -448,7 +343,11 @@ bool DXApp::HandleMessages() {
       case WM_SIZE: {
         UINT width = LOWORD(msg.lParam);
         UINT height = HIWORD(msg.lParam);
-        OnResize(width, height);
+        if (m_clientWidth != width || m_clientHeight != height) {
+          m_isResizePending = true;
+          m_clientWidth = width;
+          m_clientHeight = height;
+        }
         break;
       }
       case WM_DESTROY:

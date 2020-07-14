@@ -6,11 +6,10 @@
 #include <wrl/client.h>  // For ComPtr
 
 #include <memory>
-#include <queue>
-#include <string>
 
 #include "d3d12/Camera.h"
 #include "d3d12/clock.h"
+#include "d3d12/Pass.h"
 #include "d3d12/PerFrameAllocator.h"
 
 #define NUM_BACK_BUFFERS 2
@@ -49,13 +48,10 @@ class DXApp {
 
   unsigned int m_clientWidth;
   unsigned int m_clientHeight;
+  bool m_isResizePending = false;
 
-  // Per-pass data.
-  // TODO: Probably want a way to share pipeline states between passes?
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
-  Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
-  Microsoft::WRL::ComPtr<ID3DBlob> m_vertexShader;
-  Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
+  // Pass data.
+  ColorPass m_colorPass;
 
   // App data.
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
@@ -69,7 +65,7 @@ class DXApp {
   void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue);
   bool IsInitialized() const;
 
-  void OnResize(unsigned int width, unsigned int height);
+  void OnResize();
   void DrawScene();
   void PresentAndSignal();
 
@@ -77,7 +73,7 @@ class DXApp {
   bool HandleMessages();
 
  private:
-  // Note: InitializePerDeviceObjects must be called before the other two.
+  // Note: InitializePerDeviceObjects must be called before the others.
   void InitializePerDeviceObjects();
   void InitializePerWindowObjects();
   void InitializePerPassObjects();
