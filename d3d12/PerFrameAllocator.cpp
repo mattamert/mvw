@@ -34,9 +34,6 @@ ComPtr<ID3D12Resource> PerFrameAllocator::AllocateBuffer(ID3D12Device* device,
 }
 
 void PerFrameAllocator::Cleanup(uint64_t signalValue) {
-  if (m_allocations.size() == 0)
-    return;
-
   while (m_allocations.size() > 0 && m_allocations.front().signalValue < signalValue)
     m_allocations.pop();
 }
