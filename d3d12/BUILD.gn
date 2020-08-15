@@ -19,6 +19,8 @@ executable("d3d12_renderer") {
     "Pass.h",
     "PerFrameAllocator.cpp",
     "PerFrameAllocator.h",
+    "ResourceGarbageCollector.cpp",
+    "ResourceGarbageCollector.h",
     "WindowProxy.cpp",
     "WindowProxy.h",
   ]
