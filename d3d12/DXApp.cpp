@@ -114,7 +114,7 @@ void DXApp::InitializePerWindowObjects() {
   // TODO: Maybe use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL? But only if we need to reuse pixels from
   // the previous frame.
   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;  // Bitblt.
-  swapChainDesc.Flags = 0;
+  swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
   ComPtr<IDXGISwapChain1> swapChain;
   HR(m_factory->CreateSwapChainForHwnd(m_directCommandQueue.Get(), m_hwnd, &swapChainDesc,
@@ -122,6 +122,7 @@ void DXApp::InitializePerWindowObjects() {
                                        /*pRestrictToOutput*/ nullptr, &swapChain));
 
   HR(swapChain.As(&m_swapChain));
+  m_frameWaitableObjectHandle = m_swapChain->GetFrameLatencyWaitableObject();
 
   D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc;
   rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE::D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -199,7 +200,8 @@ void DXApp::OnResize() {
     m_backBuffers[i].Reset();
   }
 
-  HR(m_swapChain->ResizeBuffers(0, m_clientWidth, m_clientHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+  HR(m_swapChain->ResizeBuffers(0, m_clientWidth, m_clientHeight, DXGI_FORMAT_R8G8B8A8_UNORM,
+                                DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
 
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
   HR(m_swapChain->GetDesc1(&swapChainDesc));
@@ -233,8 +235,8 @@ void DXApp::OnResize() {
 void DXApp::DrawScene() {
   if (m_isResizePending)
     OnResize();
-  else
-    WaitForNextFrame();
+
+  WaitForNextFrame();
 
   ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
@@ -311,21 +313,18 @@ void DXApp::PresentAndSignal() {
 }
 
 void DXApp::WaitForNextFrame() {
-  // Future note: To wait on the present, use a Waitable swap chain
+  // Waitable swap chain reference:
   // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains
-  if (m_fence->GetCompletedValue() < m_fenceValues[m_currentBackBufferIndex]) {
-    HR(m_fence->SetEventOnCompletion(m_fenceValues[m_currentBackBufferIndex], m_fenceEvent));
-    WaitForSingleObject(m_fenceEvent, INFINITE);
-  }
+  WaitForSingleObject(m_frameWaitableObjectHandle, INFINITE);
 
   m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {
   UINT64 fenceValue = m_nextFenceValue;
-  HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
   ++m_nextFenceValue;
 
+  HR(m_directCommandQueue->Signal(m_fence.Get(), fenceValue));
   if (m_fence->GetCompletedValue() < fenceValue) {
     HR(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);

@@ -38,6 +38,7 @@ class DXApp {
   Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
   UINT m_currentBackBufferIndex;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
+  HANDLE m_frameWaitableObjectHandle;
 
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
   D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
