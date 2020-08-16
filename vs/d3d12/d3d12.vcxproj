@@ -117,6 +117,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClCompile Include="..\..\d3d12\Pass.cpp" />
     <ClCompile Include="..\..\d3d12\ResourceGarbageCollector.cpp" />
     <ClCompile Include="..\..\d3d12\WindowProxy.cpp" />
+    <ClCompile Include="..\..\d3d12\WindowTarget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\Camera.h" />
@@ -128,6 +129,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\Pass.h" />
     <ClInclude Include="..\..\d3d12\ResourceGarbageCollector.h" />
     <ClInclude Include="..\..\d3d12\WindowProxy.h" />
+    <ClInclude Include="..\..\d3d12\WindowTarget.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\PassThroughShaders.hlsl" />

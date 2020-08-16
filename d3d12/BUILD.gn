@@ -21,6 +21,8 @@ executable("d3d12_renderer") {
     "ResourceGarbageCollector.h",
     "WindowProxy.cpp",
     "WindowProxy.h",
+    "WindowTarget.cpp",
+    "WindowTarget.h",
   ]
 }
 

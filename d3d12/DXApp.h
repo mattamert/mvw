@@ -10,6 +10,7 @@
 #include "d3d12/Camera.h"
 #include "d3d12/clock.h"
 #include "d3d12/Pass.h"
+#include "d3d12/WindowTarget.h"
 
 #define NUM_BACK_BUFFERS 2
 
@@ -18,7 +19,7 @@ class MessageQueue;
 class DXApp {
  private:
   bool m_isInitialized = false;
-  HWND m_hwnd;
+  //HWND m_hwnd;
 
   std::shared_ptr<MessageQueue> m_messageQueue;
 
@@ -34,15 +35,7 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
-  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
-  D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
-  HANDLE m_frameWaitableObjectHandle;
-
-  unsigned int m_clientWidth;
-  unsigned int m_clientHeight;
-  bool m_isResizePending = false;
+  WindowTarget m_window;
 
   // Fence stuff.
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
@@ -64,7 +57,7 @@ class DXApp {
   void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue);
   bool IsInitialized() const;
 
-  void OnResize();
+  void HandleResizeIfNecessary();
   void DrawScene();
   void PresentAndSignal();
 
@@ -74,7 +67,7 @@ class DXApp {
  private:
   // Note: InitializePerDeviceObjects must be called before the others.
   void InitializePerDeviceObjects();
-  void InitializePerWindowObjects();
+  void InitializePerWindowObjects(HWND hwnd);
   void InitializePerPassObjects();
   void InitializeAppObjects();
 
