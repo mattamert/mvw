@@ -60,7 +60,8 @@ class DXApp {
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
   PinholeCamera m_camera;
-  PerFrameAllocator m_bufferAllocator;
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerObject;
 
  public:
   DXApp();
@@ -83,4 +84,9 @@ class DXApp {
 
   void FlushGPUWork();
   void WaitForNextFrame();
+
+  // TODO: Move to separate Resoruce Allocator class.
+  static Microsoft::WRL::ComPtr<ID3D12Resource> AllocateBuffer(ID3D12Device* device,
+                                                               uint64_t frameSignalValue,
+                                                               unsigned int bytesToAllocate);
 };

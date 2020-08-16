@@ -185,6 +185,10 @@ void DXApp::InitializeAppObjects() {
   m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
   m_camera.position_ = DirectX::XMFLOAT4(0, 0, -2, 1);
+
+  // Initialize the constant buffers.
+  m_constantBufferPerFrame = AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(DirectX::XMFLOAT4X4));
+  m_constantBufferPerObject = AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(DirectX::XMFLOAT4X4));
 }
 
 void DXApp::OnResize() {
@@ -244,27 +248,25 @@ void DXApp::DrawScene() {
   DirectX::XMMATRIX viewPerspective = m_camera.GenerateViewPerspectiveTransform();
   DirectX::XMFLOAT4X4 viewPerspective4x4;
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
-  ComPtr<ID3D12Resource> cameraConstantBuffer = m_bufferAllocator.AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(viewPerspective4x4));
 
   uint8_t* mappedRegion;
   CD3DX12_RANGE readRange(0, 0);
-  HR(cameraConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  HR(m_constantBufferPerFrame->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
   memcpy(mappedRegion, &viewPerspective4x4, sizeof(viewPerspective4x4));
-  cameraConstantBuffer->Unmap(0, nullptr);
+  m_constantBufferPerFrame->Unmap(0, nullptr);
 
-  m_cl->SetGraphicsRootConstantBufferView(0, cameraConstantBuffer->GetGPUVirtualAddress());
+  m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
 
   // Set up the constant buffer for the per-object data.
   DirectX::XMMATRIX identity = DirectX::XMMatrixIdentity();
   DirectX::XMFLOAT4X4 identity4x4;
   DirectX::XMStoreFloat4x4(&identity4x4, identity);
-  ComPtr<ID3D12Resource> objectConstantBuffer = m_bufferAllocator.AllocateBuffer(m_device.Get(), m_nextFenceValue, sizeof(identity4x4));
 
-  HR(objectConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  HR(m_constantBufferPerObject->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
   memcpy(mappedRegion, &identity4x4, sizeof(identity4x4));
-  objectConstantBuffer->Unmap(0, nullptr);
+  m_constantBufferPerObject->Unmap(0, nullptr);
 
-  m_cl->SetGraphicsRootConstantBufferView(1, objectConstantBuffer->GetGPUVirtualAddress());
+  m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
   // Resume scheduled programming.
 
@@ -306,8 +308,6 @@ void DXApp::WaitForNextFrame() {
   // Waitable swap chain reference:
   // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains
   WaitForSingleObject(m_frameWaitableObjectHandle, INFINITE);
-
-  m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {
@@ -319,8 +319,24 @@ void DXApp::FlushGPUWork() {
     HR(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
+}
 
-  m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
+ComPtr<ID3D12Resource> DXApp::AllocateBuffer(ID3D12Device* device,
+  uint64_t signalValue,
+  unsigned int bytesToAllocate) {
+  assert(bytesToAllocate + 255 > bytesToAllocate);  // Make sure that we don't overflow.
+
+  // Buffers must be a multiple of 256 bytes.
+  unsigned int numberOf256ByteChunks = (bytesToAllocate + 255) / 256;
+
+  D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+  D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(numberOf256ByteChunks * 256);
+  ComPtr<ID3D12Resource> buffer;
+  HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
+    D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+    IID_PPV_ARGS(&buffer)));
+
+  return buffer;
 }
 
 bool DXApp::HandleMessages() {
