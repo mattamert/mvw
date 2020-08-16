@@ -52,6 +52,7 @@ void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   InitializePerDeviceObjects();
   InitializePerWindowObjects(hwnd);
   InitializePerPassObjects();
+  InitializeFenceObjects();
   InitializeAppObjects();
 
   FlushGPUWork();
@@ -86,16 +87,17 @@ void DXApp::InitializePerDeviceObjects() {
 
 void DXApp::InitializePerWindowObjects(HWND hwnd) {
   m_window.Initialize(m_factory.Get(), m_device.Get(), m_directCommandQueue.Get(), hwnd);
-
-  // Fences probably shouldn't be considered PerWindow. But for now, like whatever man.
-  HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-  m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/ FALSE, /*bInitialState*/ FALSE, nullptr);
-  if (m_fenceEvent == nullptr)
-    HR(HRESULT_FROM_WIN32(GetLastError()));
 }
 
 void DXApp::InitializePerPassObjects() {
   m_colorPass.Initialize(m_device.Get());
+}
+
+void DXApp::InitializeFenceObjects() {
+  HR(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+  m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/ FALSE, /*bInitialState*/ FALSE, nullptr);
+  if (m_fenceEvent == nullptr)
+    HR(HRESULT_FROM_WIN32(GetLastError()));
 }
 
 void DXApp::InitializeAppObjects() {

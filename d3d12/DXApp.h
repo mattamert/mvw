@@ -69,6 +69,7 @@ class DXApp {
   void InitializePerDeviceObjects();
   void InitializePerWindowObjects(HWND hwnd);
   void InitializePerPassObjects();
+  void InitializeFenceObjects();
   void InitializeAppObjects();
 
   void FlushGPUWork();
