@@ -41,7 +41,6 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
   D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
-  UINT m_currentBackBufferIndex;
   HANDLE m_frameWaitableObjectHandle;
 
   // Fence stuff.

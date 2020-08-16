@@ -44,7 +44,7 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 }  // namespace
 
-DXApp::DXApp() : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) { }
+DXApp::DXApp() : m_isInitialized(false), m_fenceEvent(NULL) { }
 
 void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   m_hwnd = hwnd;
@@ -219,8 +219,6 @@ void DXApp::OnResize() {
     m_backBufferDescriptorHandles[i] = descriptorPtr;
   }
 
-  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
-
   m_camera.aspect_ratio_ = (float)m_clientWidth / (float)m_clientHeight;
 
   m_isResizePending = false;
@@ -232,8 +230,9 @@ void DXApp::DrawScene() {
 
   WaitForNextFrame();
 
-  ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
+  UINT currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
+  ID3D12Resource* backBuffer = m_backBuffers[currentBackBufferIndex].Get();
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[currentBackBufferIndex];
 
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
@@ -301,8 +300,6 @@ void DXApp::PresentAndSignal() {
 
   HR(m_directCommandQueue->Signal(m_fence.Get(), m_nextFenceValue));
   ++m_nextFenceValue;
-
-  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 }
 
 void DXApp::WaitForNextFrame() {
@@ -323,7 +320,6 @@ void DXApp::FlushGPUWork() {
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
 
-  m_currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
   m_bufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
