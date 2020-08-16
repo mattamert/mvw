@@ -44,10 +44,7 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 }  // namespace
 
-DXApp::DXApp() : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) {
-  for (int i = 0; i < NUM_BACK_BUFFERS; ++i)
-    m_fenceValues[i] = 0;
-}
+DXApp::DXApp() : m_isInitialized(false), m_currentBackBufferIndex(0), m_fenceEvent(NULL) { }
 
 void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   m_hwnd = hwnd;
@@ -305,7 +302,6 @@ void DXApp::DrawScene() {
 void DXApp::PresentAndSignal() {
   m_swapChain->Present(1, 0);
 
-  m_fenceValues[m_currentBackBufferIndex] = m_nextFenceValue;
   HR(m_directCommandQueue->Signal(m_fence.Get(), m_nextFenceValue));
   ++m_nextFenceValue;
 

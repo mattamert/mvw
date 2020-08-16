@@ -35,17 +35,19 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
-  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
-  UINT m_currentBackBufferIndex;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
-  HANDLE m_frameWaitableObjectHandle;
 
+  // Swap chain stuff.
+  Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
   D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
+  UINT m_currentBackBufferIndex;
+  HANDLE m_frameWaitableObjectHandle;
+
+  // Fence stuff.
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
   HANDLE m_fenceEvent;
-  uint64_t m_fenceValues[NUM_BACK_BUFFERS];
-  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since the fences start out at 0.
+  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
 
   unsigned int m_clientWidth;
   unsigned int m_clientHeight;
