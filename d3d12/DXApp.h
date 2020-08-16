@@ -5,12 +5,13 @@
 #include <dxgi1_4.h>
 #include <wrl/client.h>  // For ComPtr
 
+#include <cstdint>
 #include <memory>
 
 #include "d3d12/Camera.h"
-#include "d3d12/clock.h"
 #include "d3d12/Pass.h"
 #include "d3d12/WindowTarget.h"
+#include "d3d12/clock.h"
 
 #define NUM_BACK_BUFFERS 2
 
@@ -69,9 +70,4 @@ class DXApp {
 
   void FlushGPUWork();
   void WaitForNextFrame();
-
-  // TODO: Move to separate Resoruce Allocator class.
-  static Microsoft::WRL::ComPtr<ID3D12Resource> AllocateBuffer(ID3D12Device* device,
-                                                               uint64_t frameSignalValue,
-                                                               unsigned int bytesToAllocate);
 };

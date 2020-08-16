@@ -116,6 +116,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClCompile Include="..\..\d3d12\MessageQueue.cpp" />
     <ClCompile Include="..\..\d3d12\Pass.cpp" />
     <ClCompile Include="..\..\d3d12\ResourceGarbageCollector.cpp" />
+    <ClCompile Include="..\..\d3d12\ResourceHelper.cpp" />
     <ClCompile Include="..\..\d3d12\WindowProxy.cpp" />
     <ClCompile Include="..\..\d3d12\WindowTarget.cpp" />
   </ItemGroup>
@@ -128,6 +129,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\MessageQueue.h" />
     <ClInclude Include="..\..\d3d12\Pass.h" />
     <ClInclude Include="..\..\d3d12\ResourceGarbageCollector.h" />
+    <ClInclude Include="..\..\d3d12\ResourceHelper.h" />
     <ClInclude Include="..\..\d3d12\WindowProxy.h" />
     <ClInclude Include="..\..\d3d12\WindowTarget.h" />
   </ItemGroup>
