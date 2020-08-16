@@ -44,8 +44,6 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 }  // namespace
 
-DXApp::DXApp() : m_isInitialized(false), m_fenceEvent(NULL) { }
-
 void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   m_hwnd = hwnd;
   m_messageQueue = std::move(messageQueue);

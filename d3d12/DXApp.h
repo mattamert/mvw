@@ -17,7 +17,7 @@ class MessageQueue;
 
 class DXApp {
  private:
-  bool m_isInitialized;
+  bool m_isInitialized = false;
   HWND m_hwnd;
 
   std::shared_ptr<MessageQueue> m_messageQueue;
@@ -34,22 +34,20 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
-
-  // Swap chain stuff.
   Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;
   D3D12_CPU_DESCRIPTOR_HANDLE m_backBufferDescriptorHandles[NUM_BACK_BUFFERS];
   HANDLE m_frameWaitableObjectHandle;
 
-  // Fence stuff.
-  Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
-  HANDLE m_fenceEvent;
-  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
-
   unsigned int m_clientWidth;
   unsigned int m_clientHeight;
   bool m_isResizePending = false;
+
+  // Fence stuff.
+  Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
+  HANDLE m_fenceEvent = NULL;
+  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
 
   // Pass data.
   ColorPass m_colorPass;
@@ -63,7 +61,6 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerObject;
 
  public:
-  DXApp();
   void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue);
   bool IsInitialized() const;
 
