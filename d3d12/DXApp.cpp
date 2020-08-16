@@ -84,13 +84,10 @@ void DXApp::InitializePerDeviceObjects() {
   queueDesc.NodeMask = 0;
   HR(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_directCommandQueue)));
 
-  for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
-    HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                        IID_PPV_ARGS(&m_directCommandAllocators[i])));
-  }
+  HR(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                      IID_PPV_ARGS(&m_directCommandAllocator)));
 
-  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                 m_directCommandAllocators[m_currentBackBufferIndex].Get(),
+  HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(),
                                  /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
   HR(m_cl->Close());
 }
@@ -238,8 +235,8 @@ void DXApp::DrawScene() {
   ID3D12Resource* backBuffer = m_backBuffers[m_currentBackBufferIndex].Get();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_backBufferDescriptorHandles[m_currentBackBufferIndex];
 
-  HR(m_directCommandAllocators[m_currentBackBufferIndex]->Reset());
-  HR(m_cl->Reset(m_directCommandAllocators[m_currentBackBufferIndex].Get(), nullptr));
+  HR(m_directCommandAllocator->Reset());
+  HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
   m_cl->SetPipelineState(m_colorPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());

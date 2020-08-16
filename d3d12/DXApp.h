@@ -31,7 +31,7 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_directCommandQueue;
   // Command allocators and command lists especially should be split into something different, as
   // there should be 1 per render thread.
-  Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocators[NUM_BACK_BUFFERS];
+  Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   // Per-window data.
