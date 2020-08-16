@@ -37,13 +37,13 @@ class DXApp {
   // Per-window data.
   WindowTarget m_window;
 
+  // Pass data.
+  ColorPass m_colorPass;
+
   // Fence stuff.
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
   HANDLE m_fenceEvent = NULL;
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
-
-  // Pass data.
-  ColorPass m_colorPass;
 
   // App data.
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
