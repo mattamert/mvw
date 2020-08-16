@@ -166,12 +166,7 @@ void DXApp::DrawScene() {
   DirectX::XMFLOAT4X4 viewPerspective4x4;
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
 
-  uint8_t* mappedRegion;
-  CD3DX12_RANGE readRange(0, 0);
-  HR(m_constantBufferPerFrame->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
-  memcpy(mappedRegion, &viewPerspective4x4, sizeof(viewPerspective4x4));
-  m_constantBufferPerFrame->Unmap(0, nullptr);
-
+  ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4, sizeof(viewPerspective4x4));
   m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
 
   // Set up the constant buffer for the per-object data.
@@ -179,10 +174,7 @@ void DXApp::DrawScene() {
   DirectX::XMFLOAT4X4 identity4x4;
   DirectX::XMStoreFloat4x4(&identity4x4, identity);
 
-  HR(m_constantBufferPerObject->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
-  memcpy(mappedRegion, &identity4x4, sizeof(identity4x4));
-  m_constantBufferPerObject->Unmap(0, nullptr);
-
+  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &identity4x4, sizeof(identity4x4));
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
   // Resume scheduled programming.

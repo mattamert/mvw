@@ -24,3 +24,13 @@ Microsoft::WRL::ComPtr<ID3D12Resource> ResourceHelper::AllocateBuffer(
 
   return buffer;
 }
+
+void ResourceHelper::UpdateBuffer(ID3D12Resource* buffer, void* newData, size_t dataSize) {
+  assert(buffer != nullptr);
+
+  uint8_t* mappedRegion;
+  CD3DX12_RANGE readRange(0, 0);
+  HR(buffer->Map(0, &readRange, reinterpret_cast<void**>(&mappedRegion)));
+  memcpy(mappedRegion, newData, dataSize);
+  buffer->Unmap(0, nullptr);
+}
