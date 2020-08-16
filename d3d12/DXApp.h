@@ -19,18 +19,15 @@ class MessageQueue;
 class DXApp {
  private:
   bool m_isInitialized = false;
-  //HWND m_hwnd;
 
   std::shared_ptr<MessageQueue> m_messageQueue;
 
   // Per-device data.
-  // TODO: These should really be abstracted into their own class, as they are not exactly bound to
-  // one window.
   Microsoft::WRL::ComPtr<IDXGIFactory4> m_factory;
   Microsoft::WRL::ComPtr<ID3D12Device> m_device;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_directCommandQueue;
-  // Command allocators and command lists especially should be split into something different, as
-  // there should be 1 per render thread.
+  // Command allocators and command lists should maybe be split into something different, as there
+  // should be 1 per render thread.
   Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
