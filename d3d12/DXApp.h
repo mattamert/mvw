@@ -10,7 +10,6 @@
 #include "d3d12/Camera.h"
 #include "d3d12/clock.h"
 #include "d3d12/Pass.h"
-#include "d3d12/PerFrameAllocator.h"
 
 #define NUM_BACK_BUFFERS 2
 
