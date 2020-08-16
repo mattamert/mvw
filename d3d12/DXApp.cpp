@@ -124,7 +124,6 @@ void DXApp::InitializeAppObjects() {
   m_vertexBufferView.StrideInBytes = sizeof(ColorPass::VertexData);
 
   // Initialize the camera location.
-  m_camera.aspect_ratio_ = m_window.GetAspectRatio();
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
   m_camera.position_ = DirectX::XMFLOAT4(0, 0, -2, 1);
 
@@ -139,7 +138,6 @@ void DXApp::HandleResizeIfNecessary() {
     // chain. But it shouldn't affect anything, so right now, let's keep it in.
     FlushGPUWork();
     m_window.HandlePendingResize();
-    m_camera.aspect_ratio_ = m_window.GetAspectRatio();
   }
 }
 
@@ -157,7 +155,8 @@ void DXApp::DrawScene() {
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMMATRIX viewPerspective = m_camera.GenerateViewPerspectiveTransform();
+  DirectX::XMMATRIX viewPerspective =
+      m_camera.GenerateViewPerspectiveTransform(m_window.GetAspectRatio());
   DirectX::XMFLOAT4X4 viewPerspective4x4;
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
 
