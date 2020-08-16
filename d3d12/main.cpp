@@ -3,9 +3,9 @@
 #include <cassert>
 #include <thread>
 
-#include "DXApp.h"
-#include "MessageQueue.h"
-#include "WindowProxy.h"
+#include "d3d12/DXApp.h"
+#include "d3d12/MessageQueue.h"
+#include "d3d12/WindowProxy.h"
 
 #define USE_CONSOLE_SUBSYSTEM
 

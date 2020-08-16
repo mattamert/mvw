@@ -1,4 +1,4 @@
-#include "WindowProxy.h"
+#include "d3d12/WindowProxy.h"
 
 #include <string>
 

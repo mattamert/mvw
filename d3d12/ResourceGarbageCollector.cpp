@@ -1,4 +1,4 @@
-#include "ResourceGarbageCollector.h"
+#include "d3d12/ResourceGarbageCollector.h"
 
 #include <assert.h>
 

@@ -3,8 +3,8 @@
 #include <memory>
 #include <thread>
 
-#include "DXApp.h"
-#include "MessageQueue.h"
+#include "d3d12/DXApp.h"
+#include "d3d12/MessageQueue.h"
 
 class WindowProxy {
  private:
