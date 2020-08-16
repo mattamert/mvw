@@ -19,8 +19,11 @@ class WindowTarget {
   unsigned int m_pendingClientHeight;
   bool m_isResizePending = false;
 
-public:
-  void Initialize(IDXGIFactory2* factory, ID3D12Device* device, ID3D12CommandQueue* commandQueue, HWND hwnd);
+ public:
+  void Initialize(IDXGIFactory2* factory,
+                  ID3D12Device* device,
+                  ID3D12CommandQueue* commandQueue,
+                  HWND hwnd);
 
   bool HasPendingResize() const;
   void AddPendingResize(unsigned int width, unsigned int height);

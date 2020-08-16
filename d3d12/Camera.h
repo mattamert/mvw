@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 
 class PinholeCamera {
-public:
+ public:
   DirectX::XMMATRIX GenerateViewPerspectiveTransform(float aspectRatio) const;
 
   DirectX::XMFLOAT4 position_;

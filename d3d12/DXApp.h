@@ -26,8 +26,6 @@ class DXApp {
   Microsoft::WRL::ComPtr<IDXGIFactory4> m_factory;
   Microsoft::WRL::ComPtr<ID3D12Device> m_device;
   Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_directCommandQueue;
-  // Command allocators and command lists should maybe be split into something different, as there
-  // should be 1 per render thread.
   Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
