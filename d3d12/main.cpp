@@ -51,7 +51,6 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/,
       WindowProxy proxy;
       proxy.Initialize();
       RunMessageLoop();
-      proxy.WaitForRenderThreadToFinish();
     }
     CoUninitialize();
   }
