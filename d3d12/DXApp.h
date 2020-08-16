@@ -59,7 +59,7 @@ class DXApp {
 
   void HandleResizeIfNecessary();
   void DrawScene();
-  void PresentAndSignal();
+  void SignalAndPresent();
 
   static void RunRenderLoop(std::unique_ptr<DXApp> app);
   bool HandleMessages();

@@ -211,14 +211,11 @@ void DXApp::DrawScene() {
   m_directCommandQueue->ExecuteCommandLists(1, cl);
 }
 
-void DXApp::PresentAndSignal() {
-  m_window.Present();
-
-  // TODO: Definitely want to move this before the present with the whole new waitable swap chain
-  // thingy. Basically, the render thread will wake up when the present is finished, which happens
-  // before the signal, which is not what we want.
+void DXApp::SignalAndPresent() {
   HR(m_directCommandQueue->Signal(m_fence.Get(), m_nextFenceValue));
   ++m_nextFenceValue;
+
+  m_window.Present();
 }
 
 void DXApp::WaitForNextFrame() {
@@ -283,7 +280,7 @@ void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
       break;
 
     app->DrawScene();
-    app->PresentAndSignal();
+    app->SignalAndPresent();
   }
 
   app->FlushGPUWork();
