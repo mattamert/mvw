@@ -69,6 +69,44 @@ void WindowTarget::Initialize(IDXGIFactory2* factory,
     device->CreateRenderTargetView(m_backBuffers[i].Get(), &rtvViewDesc, descriptorPtr);
     m_backBufferDescriptorHandles[i] = descriptorPtr;
   }
+
+  InitializeDepthStemcilMembers(device, m_clientWidth, m_clientHeight);
+}
+
+void WindowTarget::InitializeDepthStemcilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
+  CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
+  D3D12_RESOURCE_DESC depthStencilBufferDesc =
+      CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height);
+  depthStencilBufferDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+  D3D12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.f, 0);
+  HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &depthStencilBufferDesc,
+                                     D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue,
+                                     IID_PPV_ARGS(&m_depthStencilBuffer)));
+
+  if (!m_dsvDescriptorHeap) {
+    D3D12_DESCRIPTOR_HEAP_DESC dsvDescriptorHeapDesc;
+    dsvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsvDescriptorHeapDesc.NumDescriptors = 1;
+    dsvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    dsvDescriptorHeapDesc.NodeMask = 0;
+
+    HR(device->CreateDescriptorHeap(&dsvDescriptorHeapDesc, IID_PPV_ARGS(&m_dsvDescriptorHeap)));
+  }
+
+  // According to the documentation: "If the format chosen is DXGI_FORMAT_UNKNOWN, the format of the
+  // parent resource is used". So we might want to switch to that eventually. 
+  D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+  //dsvDesc.Format = DXGI_FORMAT_UNKNOWN;
+  dsvDesc.Format = depthStencilBufferDesc.Format;
+  dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+  dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+  dsvDesc.Texture2D.MipSlice = 0;
+
+  CD3DX12_CPU_DESCRIPTOR_HANDLE dsvDescriptorHandle(
+      m_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  m_dsvDescriptorHandle = dsvDescriptorHandle;
+
+  device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, dsvDescriptorHandle);
 }
 
 void WindowTarget::AddPendingResize(unsigned int width, unsigned int height) {
@@ -84,6 +122,12 @@ bool WindowTarget::HasPendingResize() const {
 void WindowTarget::HandlePendingResize() {
   assert(m_isResizePending);
 
+  ComPtr<ID3D12Device> device;
+  HR(m_swapChain->GetDevice(IID_PPV_ARGS(&device)));
+
+  m_depthStencilBuffer.Reset();
+  InitializeDepthStemcilMembers(device.Get(), m_pendingClientWidth, m_pendingClientHeight);
+
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
     m_backBuffers[i].Reset();
   }
@@ -91,9 +135,6 @@ void WindowTarget::HandlePendingResize() {
   HR(m_swapChain->ResizeBuffers(0, m_pendingClientWidth, m_pendingClientHeight,
                                 DXGI_FORMAT_R8G8B8A8_UNORM,
                                 DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
-
-  ComPtr<ID3D12Device> device;
-  HR(m_swapChain->GetDevice(IID_PPV_ARGS(&device)));
 
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
   HR(m_swapChain->GetDesc1(&swapChainDesc));
@@ -142,6 +183,10 @@ D3D12_CPU_DESCRIPTOR_HANDLE WindowTarget::GetCurrentBackBufferRTVHandle() {
   UINT currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
   assert(currentBackBufferIndex < NUM_BACK_BUFFERS);
   return m_backBufferDescriptorHandles[currentBackBufferIndex];
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE WindowTarget::GetDepthStencilViewHandle() {
+  return m_dsvDescriptorHandle;
 }
 
 unsigned int WindowTarget::GetWidth() const {

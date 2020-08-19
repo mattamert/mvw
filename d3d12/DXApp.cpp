@@ -153,6 +153,7 @@ void DXApp::DrawScene() {
 
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_window.GetCurrentBackBufferRTVHandle();
+  D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_window.GetDepthStencilViewHandle();
 
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
@@ -190,10 +191,11 @@ void DXApp::DrawScene() {
   CD3DX12_RESOURCE_BARRIER rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
-  m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+  m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
   float clearColor[4] = {0.1, 0.2, 0.3, 1.0};
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+  m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_cl->IASetVertexBuffers(0, 1, &m_vertexBufferView);
   m_cl->DrawInstanced(3, 1, 0, 0);
