@@ -103,10 +103,14 @@ void DXApp::InitializeFenceObjects() {
 
 void DXApp::InitializeAppObjects() {
   // What we need: 1. Actual vertex data. 2. Buffer for the vertex data.
-  ColorPass::VertexData vertices[3] = {
+  ColorPass::VertexData vertices[] = {
       {0.0f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f},
       {0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f},
       {-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f},
+
+      { 0.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f},
+      { 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
+      {-1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f},
   };
 
   const unsigned int bufferSize = sizeof(vertices);
@@ -198,7 +202,7 @@ void DXApp::DrawScene() {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   m_cl->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-  m_cl->DrawInstanced(3, 1, 0, 0);
+  m_cl->DrawInstanced(6, 1, 0, 0);
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
