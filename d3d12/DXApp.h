@@ -43,7 +43,10 @@ class DXApp {
 
   // App data.
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+  D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+  size_t m_numIndices;
 
   PinholeCamera m_camera;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;

@@ -8,18 +8,18 @@ cbuffer PerObjectData : register(b1) {
 
 struct PSInput {
   float4 position : SV_POSITION;
-  float3 color : COLOR;
+  float3 normal : NORMAL;
 };
 
-PSInput VSMain(float3 pos : POSITION, float3 color : COLOR) {
+PSInput VSMain(float3 pos : POSITION, float3 normal : NORMAL) {
   float4x4 modelViewProjection = mul(projectionViewTransform, worldTransform);
 
   PSInput result;
   result.position = mul(modelViewProjection, float4(pos, 1.f));
-  result.color = color;
+  result.normal = normal;
   return result;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET {
-  return float4(input.color, 1.0f);
+  return float4(abs(input.normal), 1.0f);
 }
