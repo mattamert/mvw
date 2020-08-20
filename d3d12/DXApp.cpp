@@ -182,7 +182,7 @@ void DXApp::InitializeAppObjects() {
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_camera.position_ = DirectX::XMFLOAT4(0, 0, -4, 1);
+  m_camera.position_ = DirectX::XMFLOAT4(4, 4, -4, 1);
 
   // Initialize the constant buffers.
   m_constantBufferPerFrame =
