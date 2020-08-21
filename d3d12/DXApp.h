@@ -12,7 +12,6 @@
 #include "d3d12/Model.h"
 #include "d3d12/Pass.h"
 #include "d3d12/WindowTarget.h"
-#include "d3d12/clock.h"
 
 #define NUM_BACK_BUFFERS 2
 

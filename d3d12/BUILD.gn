@@ -4,10 +4,8 @@ executable("d3d12_renderer") {
   deps = [":d3d12_renderer_shaders"]
 
   sources = [
-    "camera.cpp",
-    "camera.h",
-    "clock.cpp",
-    "clock.h",
+    "Camera.cpp",
+    "Camera.h",
     "comhelper.h",
     "d3dx12.h",
     "DXApp.cpp",
@@ -23,6 +21,8 @@ executable("d3d12_renderer") {
     "ResourceGarbageCollector.h",
     "ResourceHelper.cpp",
     "ResourceHelper.h",
+    "Timer.cpp",
+    "Timer.h",
     "WindowProxy.cpp",
     "WindowProxy.h",
     "WindowTarget.cpp",

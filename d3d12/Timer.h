@@ -3,7 +3,7 @@
 #include <Windows.h>
 #include <cstdint>
 
-class Clock {
+class Timer {
  private:
   bool m_isRunning = false;
   LARGE_INTEGER m_frequency;

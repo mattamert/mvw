@@ -1,11 +1,11 @@
-#include "d3d12/clock.h"
+#include "d3d12/Timer.h"
 
 #include <cassert>
 
 constexpr uint64_t nanosecondsInMilliseconds = 1000000;
 constexpr uint64_t nanosecondsInSeconds = 1000000000;
 
-void Clock::Start() {
+void Timer::Start() {
   if (m_isRunning)
     return;
 
@@ -15,7 +15,7 @@ void Clock::Start() {
   m_isRunning = true;
 }
 
-uint64_t Clock::GetTotalElapsedNanoseconds() {
+uint64_t Timer::GetTotalElapsedNanoseconds() {
   if (!m_isRunning)
     return 0ull;
 
@@ -31,16 +31,16 @@ uint64_t Clock::GetTotalElapsedNanoseconds() {
   return elapsed;
 }
 
-double Clock::GetTotalElapsedMilliseconds() {
+double Timer::GetTotalElapsedMilliseconds() {
   return static_cast<double>(GetTotalElapsedNanoseconds()) /
          static_cast<double>(nanosecondsInMilliseconds);
 }
 
-double Clock::GetTotalElapsedSeconds() {
+double Timer::GetTotalElapsedSeconds() {
   return static_cast<double>(GetTotalElapsedNanoseconds()) /
          static_cast<double>(nanosecondsInSeconds);
 }
 
-void Clock::Stop() {
+void Timer::Stop() {
   m_isRunning = false;
 }
