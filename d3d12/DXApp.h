@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "d3d12/Camera.h"
+#include "d3d12/Model.h"
 #include "d3d12/Pass.h"
 #include "d3d12/WindowTarget.h"
 #include "d3d12/clock.h"
@@ -42,11 +43,7 @@ class DXApp {
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
 
   // App data.
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
-  D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-  D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-  size_t m_numIndices;
+  Model m_cubeModel;
 
   PinholeCamera m_camera;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;

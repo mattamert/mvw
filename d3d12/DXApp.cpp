@@ -102,83 +102,7 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeAppObjects() {
-  ColorPass::VertexData vertices[] = {
-      // +x direction
-      {+1.0f, -1.0f, -1.0f, 1.f, 0.f, 0.f},
-      {+1.0f, +1.0f, -1.0f, 1.f, 0.f, 0.f},
-      {+1.0f, +1.0f, +1.0f, 1.f, 0.f, 0.f},
-      {+1.0f, -1.0f, +1.0f, 1.f, 0.f, 0.f},
-
-      // -x direction
-      {-1.0f, -1.0f, +1.0f, -1.f, 0.f, 0.f},
-      {-1.0f, +1.0f, +1.0f, -1.f, 0.f, 0.f},
-      {-1.0f, +1.0f, -1.0f, -1.f, 0.f, 0.f},
-      {-1.0f, -1.0f, -1.0f, -1.f, 0.f, 0.f},
-
-      // +y direction
-      {+1.0f, +1.0f, +1.0f, 0.f, 1.f, 0.f},
-      {+1.0f, +1.0f, -1.0f, 0.f, 1.f, 0.f},
-      {-1.0f, +1.0f, -1.0f, 0.f, 1.f, 0.f},
-      {-1.0f, +1.0f, +1.0f, 0.f, 1.f, 0.f},
-
-      // -y direction
-      {+1.0f, -1.0f, +1.0f, 0.f, -1.f, 0.f},
-      {+1.0f, -1.0f, -1.0f, 0.f, -1.f, 0.f},
-      {-1.0f, -1.0f, -1.0f, 0.f, -1.f, 0.f},
-      {-1.0f, -1.0f, +1.0f, 0.f, -1.f, 0.f},
-
-      // +z direction
-      {+1.0f, -1.0f, +1.0f, 0.f, 0.f, 1.f},
-      {+1.0f, +1.0f, +1.0f, 0.f, 0.f, 1.f},
-      {-1.0f, +1.0f, +1.0f, 0.f, 0.f, 1.f},
-      {-1.0f, -1.0f, +1.0f, 0.f, 0.f, 1.f},
-
-      // -z direction
-      {-1.0f, -1.0f, -1.0f, 0.f, 0.f, -1.f},
-      {-1.0f, +1.0f, -1.0f, 0.f, 0.f, -1.f},
-      {+1.0f, +1.0f, -1.0f, 0.f, 0.f, -1.f},
-      {+1.0f, -1.0f, -1.0f, 0.f, 0.f, -1.f},
-  };
-
-  std::vector<uint32_t> indices;
-  indices.reserve(6 * 6);
-  for (size_t i = 0; i < 6; ++i) {
-    uint32_t starting_index = i * 4;
-    indices.push_back(starting_index);
-    indices.push_back(starting_index + 1);
-    indices.push_back(starting_index + 2);
-
-    indices.push_back(starting_index);
-    indices.push_back(starting_index + 2);
-    indices.push_back(starting_index + 3);
-  }
-
-  const size_t vertexBufferSize = sizeof(vertices);
-  CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-  CD3DX12_RESOURCE_DESC vertexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-  HR(m_device->CreateCommittedResource(&vertexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                       &vertexBufferResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                       nullptr, IID_PPV_ARGS(&m_vertexBuffer)));
-
-  ResourceHelper::UpdateBuffer(m_vertexBuffer.Get(), vertices, vertexBufferSize);
-
-  m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-  m_vertexBufferView.SizeInBytes = vertexBufferSize;
-  m_vertexBufferView.StrideInBytes = sizeof(ColorPass::VertexData);
-
-  m_numIndices = indices.size();
-  const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
-  CD3DX12_HEAP_PROPERTIES indexBufferHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
-  CD3DX12_RESOURCE_DESC indexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-  HR(m_device->CreateCommittedResource(&indexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                       &indexBufferResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
-                                       nullptr, IID_PPV_ARGS(&m_indexBuffer)));
-
-  ResourceHelper::UpdateBuffer(m_indexBuffer.Get(), indices.data(), indexBufferSize);
-
-  m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-  m_indexBufferView.SizeInBytes = indexBufferSize;
-  m_indexBufferView.Format = DXGI_FORMAT_R32_UINT; // This might not be right.
+  m_cubeModel.InitCube(m_device.Get());
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -250,9 +174,10 @@ void DXApp::DrawScene() {
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  m_cl->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-  m_cl->IASetIndexBuffer(&m_indexBufferView);
-  m_cl->DrawIndexedInstanced(m_numIndices, 1, 0, 0, 0);
+
+  m_cl->IASetVertexBuffers(0, 1, &m_cubeModel.GetVertexBufferView());
+  m_cl->IASetIndexBuffer(&m_cubeModel.GetIndexBufferView());
+  m_cl->DrawIndexedInstanced(m_cubeModel.GetNumIndices(), 1, 0, 0, 0);
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
