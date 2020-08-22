@@ -40,6 +40,10 @@ HRESULT Image::LoadImageFile(const std::wstring& file, Image* img) {
   if (!canConvert)
     return E_FAIL;
 
+  RETURN_IF_FAILED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
+                                         WICBitmapDitherTypeErrorDiffusion, nullptr, 0,
+                                         WICBitmapPaletteTypeMedianCut));
+
   UINT width;
   UINT height;
   RETURN_IF_FAILED(converter->GetSize(&width, &height));
