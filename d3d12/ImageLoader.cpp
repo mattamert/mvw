@@ -52,4 +52,6 @@ HRESULT Image::LoadImageFile(const std::wstring& file, Image* img) {
   img->format = DXGI_FORMAT_R8G8B8A8_UNORM;
   img->width = width;
   img->height = height;
+
+  return S_OK;
 }
