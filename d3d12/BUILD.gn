@@ -10,6 +10,8 @@ executable("d3d12_renderer") {
     "d3dx12.h",
     "DXApp.cpp",
     "DXApp.h",
+    "ImageLoader.cpp",
+    "ImageLoader.h",
     "main.cpp",
     "MessageQueue.cpp",
     "MessageQueue.h",
