@@ -56,6 +56,10 @@ void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   InitializeFenceObjects();
   InitializeAppObjects();
 
+  HR(m_cl->Close());
+  ID3D12CommandList* cl[] = {m_cl.Get()};
+  m_directCommandQueue->ExecuteCommandLists(1, cl);
+
   FlushGPUWork();
 
   m_isInitialized = true;
@@ -83,7 +87,8 @@ void DXApp::InitializePerDeviceObjects() {
 
   HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(),
                                  /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
-  HR(m_cl->Close());
+
+  // Keeping m_cl open so that default-heap resources can be initialized.
 }
 
 void DXApp::InitializePerWindowObjects(HWND hwnd) {
@@ -102,7 +107,7 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeAppObjects() {
-  m_cubeModel.InitCube(m_device.Get());
+  m_cubeModel.InitCube(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue);
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -198,6 +203,7 @@ void DXApp::SignalAndPresent() {
 
 void DXApp::WaitForNextFrame() {
   m_window.WaitForNextFrame();
+  m_garbageCollector.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {
@@ -209,6 +215,8 @@ void DXApp::FlushGPUWork() {
     HR(m_fence->SetEventOnCompletion(fenceValue, m_fenceEvent));
     WaitForSingleObject(m_fenceEvent, INFINITE);
   }
+
+  m_garbageCollector.Cleanup(m_fence->GetCompletedValue());
 }
 
 bool DXApp::HandleMessages() {

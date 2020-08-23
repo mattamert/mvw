@@ -11,6 +11,7 @@
 #include "d3d12/Camera.h"
 #include "d3d12/Model.h"
 #include "d3d12/Pass.h"
+#include "d3d12/ResourceGarbageCollector.h"
 #include "d3d12/WindowTarget.h"
 
 #define NUM_BACK_BUFFERS 2
@@ -40,6 +41,9 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window?
   HANDLE m_fenceEvent = NULL;
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
+
+  // Garbage collector.
+  ResourceGarbageCollector m_garbageCollector;
 
   // App data.
   Model m_cubeModel;

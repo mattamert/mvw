@@ -5,9 +5,17 @@
 #include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
 
+#include <assert.h>
 #include <vector>
 
-void Model::InitCube(ID3D12Device* device) {
+#include <wrl/client.h>  // For ComPtr
+
+using namespace Microsoft::WRL;
+
+void Model::InitCube(ID3D12Device* device,
+                     ID3D12GraphicsCommandList* cl,
+                     ResourceGarbageCollector& garbageCollector,
+                     uint64_t nextSignalValue) {
   ColorPass::VertexData vertices[] = {
       // +x direction
       {+1.0f, -1.0f, -1.0f, 1.f, 0.f, 0.f},
@@ -60,13 +68,25 @@ void Model::InitCube(ID3D12Device* device) {
   }
 
   const size_t vertexBufferSize = sizeof(vertices);
-  CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+  CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
   CD3DX12_RESOURCE_DESC vertexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
   HR(device->CreateCommittedResource(&vertexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &vertexBufferResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+                                     &vertexBufferResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
                                      nullptr, IID_PPV_ARGS(&m_vertexBuffer)));
 
-  ResourceHelper::UpdateBuffer(m_vertexBuffer.Get(), vertices, vertexBufferSize);
+  ComPtr<ID3D12Resource> intermediateVertexBuffer = ResourceHelper::AllocateIntermediateBuffer(
+      device, m_vertexBuffer.Get(), garbageCollector, nextSignalValue);
+
+  D3D12_SUBRESOURCE_DATA vertexData;
+  vertexData.pData = vertices;
+  vertexData.RowPitch = vertexBufferSize;
+  vertexData.SlicePitch = vertexBufferSize;
+  UpdateSubresources(cl, m_vertexBuffer.Get(), intermediateVertexBuffer.Get(), 0, 0, 1,
+                     &vertexData);
+
+  CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+  cl->ResourceBarrier(1, &barrier);
 
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = vertexBufferSize;

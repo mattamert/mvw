@@ -4,7 +4,7 @@
 
 void ResourceGarbageCollector::MarkAsGarbage(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
                                              uint64_t signalValue) {
-  assert((m_garbage.size() > 0) ? true : m_garbage.front().signalValue <= signalValue);
+  assert((m_garbage.size() > 0) ? m_garbage.front().signalValue <= signalValue : true);
 
   ResourceGarbageCollector::Garbage newGarbage;
   newGarbage.resource = std::move(resource);

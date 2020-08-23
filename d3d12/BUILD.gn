@@ -1,5 +1,5 @@
 executable("d3d12_renderer") {
-  libs = [ "user32.lib", "Ole32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib" ]
+  libs = [ "user32.lib", "Ole32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib", "dxguid.lib" ]
 
   deps = [":d3d12_renderer_shaders"]
 
