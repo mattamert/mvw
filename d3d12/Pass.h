@@ -13,6 +13,7 @@ class ColorPass {
  public:
   struct VertexData {
     float position[3];
+    float textureCoord[2];
     float color[3];
   };
 

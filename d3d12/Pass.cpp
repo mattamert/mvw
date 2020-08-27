@@ -37,23 +37,28 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 void ColorPass::Initialize(ID3D12Device* device) {
 #if 1
-  D3D12_ROOT_PARAMETER parameters[2];
-  parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-  parameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-  parameters[0].Descriptor.ShaderRegister = 0;
-  parameters[0].Descriptor.RegisterSpace = 0;
+  const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
+      D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+      D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 
-  parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-  parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-  parameters[1].Descriptor.ShaderRegister = 1;
-  parameters[1].Descriptor.RegisterSpace = 0;
+  CD3DX12_DESCRIPTOR_RANGE texTable;
+  texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+  CD3DX12_ROOT_PARAMETER parameters[3] = {};
+  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
+                                         D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
+                                         D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,
+                                      D3D12_SHADER_VISIBILITY_PIXEL);
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.NumParameters = 2;
+  rootSignatureDesc.NumParameters = 3;
   rootSignatureDesc.pParameters = parameters;
   rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-  rootSignatureDesc.NumStaticSamplers = 0;
-  rootSignatureDesc.pStaticSamplers = nullptr;
+  rootSignatureDesc.NumStaticSamplers = 1;
+  rootSignatureDesc.pStaticSamplers = &pointClamp;
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
@@ -89,8 +94,11 @@ void ColorPass::Initialize(ID3D12Device* device) {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
        /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        /*InstanceDataStepRate*/ 0},
-      {"NORMAL", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+      {"TEXCOORD", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32_FLOAT, /*InputSlot*/ 0,
        /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"NORMAL", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        /*InstanceDataStepRate*/ 0},
   };
 

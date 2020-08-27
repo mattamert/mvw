@@ -160,6 +160,11 @@ void DXApp::DrawScene() {
   ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &identity4x4, sizeof(identity4x4));
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
+  ID3D12DescriptorHeap* heaps[] = {m_cubeModel.GetSRVDescriptorHeap()};
+  m_cl->SetDescriptorHeaps(1, heaps);
+  m_cl->SetGraphicsRootDescriptorTable(
+      2, m_cubeModel.GetSRVDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
+
   // Resume scheduled programming.
 
   unsigned int width = m_window.GetWidth();
@@ -182,6 +187,7 @@ void DXApp::DrawScene() {
 
   m_cl->IASetVertexBuffers(0, 1, &m_cubeModel.GetVertexBufferView());
   m_cl->IASetIndexBuffer(&m_cubeModel.GetIndexBufferView());
+
   m_cl->DrawIndexedInstanced(m_cubeModel.GetNumIndices(), 1, 0, 0, 0);
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(

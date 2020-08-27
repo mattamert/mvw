@@ -13,4 +13,6 @@ struct Image {
   DXGI_FORMAT format;
   size_t width;
   size_t height;
+
+  size_t bytesPerPixel;  // TODO: Doing it this way does not support bc-packed textures.
 };
