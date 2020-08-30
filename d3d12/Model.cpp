@@ -56,7 +56,7 @@ void Model::InitCube(ID3D12Device* device,
   };
 
   std::vector<uint32_t> indices;
-  indices.reserve(6 * 6);
+  indices.reserve(6 * 6); // 6 indices per face * 6 faces.
   for (size_t i = 0; i < 6; ++i) {
     uint32_t starting_index = i * 4;
     indices.push_back(starting_index);
