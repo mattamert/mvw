@@ -17,6 +17,8 @@ executable("d3d12_renderer") {
     "MessageQueue.h",
     "Model.cpp",
     "Model.h",
+    "ObjFileLoader.cpp",
+    "ObjFileLoader.h",
     "Pass.cpp",
     "Pass.h",
     "ResourceGarbageCollector.cpp",

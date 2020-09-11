@@ -111,6 +111,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemGroup>
     <ClCompile Include="..\..\d3d12\Camera.cpp" />
     <ClCompile Include="..\..\d3d12\ImageLoader.cpp" />
+    <ClCompile Include="..\..\d3d12\ObjFileLoader.cpp" />
     <ClCompile Include="..\..\d3d12\Timer.cpp" />
     <ClCompile Include="..\..\d3d12\DXApp.cpp" />
     <ClCompile Include="..\..\d3d12\main.cpp" />
@@ -125,6 +126,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\Camera.h" />
     <ClInclude Include="..\..\d3d12\ImageLoader.h" />
+    <ClInclude Include="..\..\d3d12\ObjFileLoader.h" />
     <ClInclude Include="..\..\d3d12\Timer.h" />
     <ClInclude Include="..\..\d3d12\comhelper.h" />
     <ClInclude Include="..\..\d3d12\d3dx12.h" />
