@@ -49,6 +49,11 @@ struct Indices {
   struct Hash {
     size_t operator()(const Indices& indices) const;
   };
+
+  bool operator==(const Indices& other) const {
+    return (this->posIndex == other.posIndex && this->texCoordIndex == other.texCoordIndex &&
+            this->normalIndex == other.normalIndex);
+  }
 };
 
 template <class T>
@@ -96,19 +101,20 @@ void ObjLineTokenizer::ConsumeWhitespace() {
 }
 
 static bool ParseDeclarationType(char* decl, size_t length, DeclarationType* type) {
-  if (strncmp(decl, "vt", length) == 0) {
+  // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
+  if (length == 2 && strncmp(decl, "vt", length) == 0) {
     *type = DeclarationType::TextureCoord;
-  } else if (strncmp(decl, "vn", length) == 0) {
+  } else if (length == 2 && strncmp(decl, "vn", length) == 0) {
     *type = DeclarationType::Normal;
-  } else if (strncmp(decl, "v", length) == 0) {
+  } else if (length == 1 && strncmp(decl, "v", length) == 0) {
     *type = DeclarationType::Position;
-  } else if (strncmp(decl, "f", length) == 0) {
+  } else if (length == 1 && strncmp(decl, "f", length) == 0) {
     *type = DeclarationType::Face;
-  } else if (strncmp(decl, "g", length) == 0) {
+  } else if (length == 1 && strncmp(decl, "g", length) == 0) {
     *type = DeclarationType::Group;
-  } else if (strncmp(decl, "mtllib", length) == 0) {
+  } else if (length == 6 && strncmp(decl, "mtllib", length) == 0) {
     *type = DeclarationType::MTLLib;
-  } else if (strncmp(decl, "usemtl", length) == 0) {
+  } else if (length == 6 && strncmp(decl, "usemtl", length) == 0) {
     *type = DeclarationType::UseMTL;
   } else {
     return false;
@@ -186,6 +192,7 @@ bool ObjLineTokenizer::AcceptString(std::string* str) {
   size_t length = end - start;
   if (length > 0) {
     *str = std::string(m_line, start, end - start);
+    m_index = end;
     return true;
   }
 
@@ -277,6 +284,8 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
     m_currentGroup->indices.push_back(curr);
     prev = curr;
   }
+
+  return true;
 }
 
 static bool ResolveRelativeIndex(long long index, size_t referenceSize, unsigned long long* resolvedIndex) {
@@ -367,7 +376,7 @@ bool ObjFileParser::Init(std::istream& input) {
         if (indices.size() < 3) {
           parseSucceeded = false;
         } else if (parseSucceeded) {
-          AddVerticesFromFace(indices);
+          parseSucceeded &= AddVerticesFromFace(indices);
         }
       } break;
 
