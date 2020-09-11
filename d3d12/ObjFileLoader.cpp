@@ -215,7 +215,10 @@ class ObjFileParser {
   // bool HandleFace(const std::vector<Indices>& face);
 
  public:
-  bool Init(std::ifstream& input);
+  bool Init(std::istream& input);
+
+  std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
+  std::vector<ObjData::Group>& GetGroups() { return m_groups; }
 };
 
 void ObjFileParser::AddGroup(std::string&& groupName) {
@@ -276,15 +279,28 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
   }
 }
 
-bool ObjFileParser::Init(std::ifstream& input) {
+static bool ResolveRelativeIndex(long long index, size_t referenceSize, unsigned long long* resolvedIndex) {
+  if (index < 0) {
+    if (referenceSize < -index) {
+      return false;
+    }
+    *resolvedIndex = (long long)referenceSize + index + 1;
+  } else {
+    *resolvedIndex = (unsigned long long)index;
+  }
+
+  return true;
+}
+
+bool ObjFileParser::Init(std::istream& input) {
   size_t currentLineNumber = 0;
   std::string line;
   while (std::getline(input, line)) {
     currentLineNumber++;
-    if (line.empty())
-      continue;
 
     ObjLineTokenizer tokenizer(std::move(line));
+    if (tokenizer.IsAtEnd())
+      continue;
 
     DeclarationType type;
     bool parseSucceeded = tokenizer.AcceptDeclaration(&type);
@@ -339,39 +355,12 @@ bool ObjFileParser::Init(std::ifstream& input) {
             }
           }
 
-          // Handle relative-index case.
-
-          if (posIndex < 0) {
-            if (m_positions.size() >= -posIndex) {
-              posIndex = (long long)m_positions.size() + posIndex + 1;
-            } else {
-              parseSucceeded = false;
-              posIndex = 0;
-            }
-          }
-
-          if (texCoordIndex < 0) {
-            if (m_texCoords.size() >= -texCoordIndex) {
-              texCoordIndex = (long long)m_texCoords.size() + texCoordIndex + 1;
-            } else {
-              parseSucceeded = false;
-              texCoordIndex = 0;
-            }
-          }
-
-          if (normalIndex < 0) {
-            if (m_normals.size() >= -normalIndex) {
-              normalIndex = (long long)m_normals.size() + normalIndex + 1;
-            } else {
-              parseSucceeded = false;
-              normalIndex = 0;
-            }
-          }
-
           Indices curr;
-          curr.posIndex = (unsigned long long)posIndex;
-          curr.texCoordIndex = (unsigned long long)texCoordIndex;
-          curr.normalIndex = (unsigned long long)normalIndex;
+          parseSucceeded &= ResolveRelativeIndex(posIndex, m_positions.size(), &curr.posIndex);
+          parseSucceeded &=
+              ResolveRelativeIndex(texCoordIndex, m_texCoords.size(), &curr.texCoordIndex);
+          parseSucceeded &= ResolveRelativeIndex(normalIndex, m_normals.size(), &curr.normalIndex);
+
           indices.emplace_back(curr);
         }
 
@@ -381,6 +370,7 @@ bool ObjFileParser::Init(std::ifstream& input) {
           AddVerticesFromFace(indices);
         }
       } break;
+
       case DeclarationType::Group: {
         std::vector<std::string> groupNames;
         std::string currentName;
@@ -400,23 +390,40 @@ bool ObjFileParser::Init(std::ifstream& input) {
           AddGroup(std::move(groupNames[0]));
         }
       } break;
+
       case DeclarationType::MTLLib:
         std::cerr << "MTLLib not yet supported..." << std::endl;
         break;
+
       case DeclarationType::UseMTL:
         std::cerr << "UseMTL not yet supported..." << std::endl;
         break;
+
       default:
         parseSucceeded = false;
         break;
     }
 
     if (parseSucceeded && !tokenizer.IsAtEnd()) {
-      std::cerr << "Additional unparsed information on line " << currentLineNumber << std::endl;
+      std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber << std::endl;
     } else if (!parseSucceeded) {
       std::cerr << "Parsing failed on line " << currentLineNumber << std::endl;
+      return false;
     }
   }
+
+  return true;
+}
+
+bool ObjData::ParseObjFile(const std::string& fileName) {
+  std::ifstream file(fileName);
+  ObjFileParser parser;
+  if (!parser.Init(file))
+    return false;
+
+  m_vertices = std::move(parser.GetVertices());
+  m_groups = std::move(parser.GetGroups());
+  return true;
 }
 
 // The source of hash_combine was taken from the boost library. Boost's license is as follow:

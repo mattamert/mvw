@@ -17,8 +17,8 @@ public:
     std::vector<size_t> indices;
   };
 
-  std::vector<Vertex> vertices;
-  std::vector<size_t> indices;
+  std::vector<Vertex> m_vertices;
+  std::vector<Group> m_groups;
 
   // TODO: Materials.
 
