@@ -1,75 +1,30 @@
 #include "d3d12/Model.h"
 
 #include "d3d12/ImageLoader.h"
+#include "d3d12/ObjFileLoader.h"
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceHelper.h"
 #include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
 
 #include <assert.h>
+#include <iostream>
 #include <vector>
+
+#include "d3d12/ObjFileLoader.h"
 
 #include <wrl/client.h>  // For ComPtr
 
 using namespace Microsoft::WRL;
 
-void Model::InitCube(ID3D12Device* device,
-                     ID3D12GraphicsCommandList* cl,
-                     ResourceGarbageCollector& garbageCollector,
-                     uint64_t nextSignalValue) {
-  ColorPass::VertexData vertices[] = {
-      // +x direction
-      {{+1.0f, +1.0f, -1.0f}, {0.f, 0.f}, {1.f, 0.f, 0.f}},
-      {{+1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {1.f, 0.f, 0.f}},
-      {{+1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {1.f, 0.f, 0.f}},
-      {{+1.0f, -1.0f, -1.0f}, {0.f, 1.f}, {1.f, 0.f, 0.f}},
-
-      // -x direction
-      {{-1.0f, -1.0f, +1.0f}, {0.f, 0.f}, {-1.f, 0.f, 0.f}},
-      {{-1.0f, -1.0f, -1.0f}, {1.f, 0.f}, {-1.f, 0.f, 0.f}},
-      {{-1.0f, +1.0f, -1.0f}, {1.f, 1.f}, {-1.f, 0.f, 0.f}},
-      {{-1.0f, +1.0f, +1.0f}, {0.f, 1.f}, {-1.f, 0.f, 0.f}},
-
-      // +y direction
-      {{-1.0f, +1.0f, +1.0f}, {0.f, 0.f}, {0.f, 1.f, 0.f}},
-      {{+1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {0.f, 1.f, 0.f}},
-      {{+1.0f, +1.0f, -1.0f}, {1.f, 1.f}, {0.f, 1.f, 0.f}},
-      {{-1.0f, +1.0f, -1.0f}, {0.f, 1.f}, {0.f, 1.f, 0.f}},
-
-      // -y direction
-      {{-1.0f, -1.0f, -1.0f}, {0.f, 0.f}, {0.f, -1.f, 0.f}},
-      {{+1.0f, -1.0f, -1.0f}, {1.f, 0.f}, {0.f, -1.f, 0.f}},
-      {{+1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {0.f, -1.f, 0.f}},
-      {{-1.0f, -1.0f, +1.0f}, {0.f, 1.f}, {0.f, -1.f, 0.f}},
-
-      // +z direction
-      {{+1.0f, +1.0f, +1.0f}, {0.f, 0.f}, {0.f, 0.f, 1.f}},
-      {{-1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {0.f, 0.f, 1.f}},
-      {{-1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {0.f, 0.f, 1.f}},
-      {{+1.0f, -1.0f, +1.0f}, {0.f, 1.f}, {0.f, 0.f, 1.f}},
-
-      // -z direction
-      {{-1.0f, +1.0f, -1.0f}, {0.f, 0.f}, {0.f, 0.f, -1.f}},
-      {{+1.0f, +1.0f, -1.0f}, {1.f, 0.f}, {0.f, 0.f, -1.f}},
-      {{+1.0f, -1.0f, -1.0f}, {1.f, 1.f}, {0.f, 0.f, -1.f}},
-      {{-1.0f, -1.0f, -1.0f}, {0.f, 1.f}, {0.f, 0.f, -1.f}},
-  };
-
-  std::vector<uint32_t> indices;
-  indices.reserve(6 * 6); // 6 indices per face * 6 faces.
-  for (size_t i = 0; i < 6; ++i) {
-    uint32_t starting_index = i * 4;
-    indices.push_back(starting_index);
-    indices.push_back(starting_index + 1);
-    indices.push_back(starting_index + 2);
-
-    indices.push_back(starting_index);
-    indices.push_back(starting_index + 2);
-    indices.push_back(starting_index + 3);
-  }
-
+void Model::Init(ID3D12Device* device,
+                 ID3D12GraphicsCommandList* cl,
+                 ResourceGarbageCollector& garbageCollector,
+                 uint64_t nextSignalValue,
+                 const std::vector<ObjData::Vertex>& vertices,
+                 const std::vector<uint32_t>& indices) {
   // Upload the vertex data.
-  const size_t vertexBufferSize = sizeof(vertices);
+  const size_t vertexBufferSize = sizeof(ObjData::Vertex) * vertices.size();
   CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
   CD3DX12_RESOURCE_DESC vertexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
   HR(device->CreateCommittedResource(&vertexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
@@ -80,7 +35,7 @@ void Model::InitCube(ID3D12Device* device,
       device, m_vertexBuffer.Get(), garbageCollector, nextSignalValue);
 
   D3D12_SUBRESOURCE_DATA vertexData;
-  vertexData.pData = vertices;
+  vertexData.pData = vertices.data();
   vertexData.RowPitch = vertexBufferSize;
   vertexData.SlicePitch = vertexBufferSize;
   UpdateSubresources(cl, m_vertexBuffer.Get(), intermediateVertexBuffer.Get(), 0, 0, 1,
@@ -129,8 +84,8 @@ void Model::InitCube(ID3D12Device* device,
       img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
   textureResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
   HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-                                     nullptr, IID_PPV_ARGS(&m_texture)));
+                                     &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                     IID_PPV_ARGS(&m_texture)));
 
   ComPtr<ID3D12Resource> intermediateTextureBuffer = ResourceHelper::AllocateIntermediateBuffer(
       device, m_texture.Get(), garbageCollector, nextSignalValue);
@@ -163,8 +118,86 @@ void Model::InitCube(ID3D12Device* device,
   srvDesc.Texture2D.PlaneSlice = 0;
   srvDesc.Texture2D.ResourceMinLODClamp = 0;
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+  CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(
+      m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
   device->CreateShaderResourceView(m_texture.Get(), &srvDesc, cpuHandle);
+}
+
+void Model::InitCube(ID3D12Device* device,
+                     ID3D12GraphicsCommandList* cl,
+                     ResourceGarbageCollector& garbageCollector,
+                     uint64_t nextSignalValue) {
+  std::vector<ObjData::Vertex> vertices = {
+      // +x direction
+      {{+1.0f, +1.0f, -1.0f}, {0.f, 0.f}, {1.f, 0.f, 0.f}},
+      {{+1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {1.f, 0.f, 0.f}},
+      {{+1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {1.f, 0.f, 0.f}},
+      {{+1.0f, -1.0f, -1.0f}, {0.f, 1.f}, {1.f, 0.f, 0.f}},
+
+      // -x direction
+      {{-1.0f, -1.0f, +1.0f}, {0.f, 0.f}, {-1.f, 0.f, 0.f}},
+      {{-1.0f, -1.0f, -1.0f}, {1.f, 0.f}, {-1.f, 0.f, 0.f}},
+      {{-1.0f, +1.0f, -1.0f}, {1.f, 1.f}, {-1.f, 0.f, 0.f}},
+      {{-1.0f, +1.0f, +1.0f}, {0.f, 1.f}, {-1.f, 0.f, 0.f}},
+
+      // +y direction
+      {{-1.0f, +1.0f, +1.0f}, {0.f, 0.f}, {0.f, 1.f, 0.f}},
+      {{+1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {0.f, 1.f, 0.f}},
+      {{+1.0f, +1.0f, -1.0f}, {1.f, 1.f}, {0.f, 1.f, 0.f}},
+      {{-1.0f, +1.0f, -1.0f}, {0.f, 1.f}, {0.f, 1.f, 0.f}},
+
+      // -y direction
+      {{-1.0f, -1.0f, -1.0f}, {0.f, 0.f}, {0.f, -1.f, 0.f}},
+      {{+1.0f, -1.0f, -1.0f}, {1.f, 0.f}, {0.f, -1.f, 0.f}},
+      {{+1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {0.f, -1.f, 0.f}},
+      {{-1.0f, -1.0f, +1.0f}, {0.f, 1.f}, {0.f, -1.f, 0.f}},
+
+      // +z direction
+      {{+1.0f, +1.0f, +1.0f}, {0.f, 0.f}, {0.f, 0.f, 1.f}},
+      {{-1.0f, +1.0f, +1.0f}, {1.f, 0.f}, {0.f, 0.f, 1.f}},
+      {{-1.0f, -1.0f, +1.0f}, {1.f, 1.f}, {0.f, 0.f, 1.f}},
+      {{+1.0f, -1.0f, +1.0f}, {0.f, 1.f}, {0.f, 0.f, 1.f}},
+
+      // -z direction
+      {{-1.0f, +1.0f, -1.0f}, {0.f, 0.f}, {0.f, 0.f, -1.f}},
+      {{+1.0f, +1.0f, -1.0f}, {1.f, 0.f}, {0.f, 0.f, -1.f}},
+      {{+1.0f, -1.0f, -1.0f}, {1.f, 1.f}, {0.f, 0.f, -1.f}},
+      {{-1.0f, -1.0f, -1.0f}, {0.f, 1.f}, {0.f, 0.f, -1.f}},
+  };
+
+  std::vector<uint32_t> indices;
+  indices.reserve(6 * 6);  // 6 indices per face * 6 faces.
+  for (size_t i = 0; i < 6; ++i) {
+    uint32_t starting_index = i * 4;
+    indices.push_back(starting_index);
+    indices.push_back(starting_index + 1);
+    indices.push_back(starting_index + 2);
+
+    indices.push_back(starting_index);
+    indices.push_back(starting_index + 2);
+    indices.push_back(starting_index + 3);
+  }
+
+  Init(device, cl, garbageCollector, nextSignalValue, vertices, indices);
+}
+
+bool Model::InitFromObjFile(ID3D12Device* device,
+                            ID3D12GraphicsCommandList* cl,
+                            ResourceGarbageCollector& garbageCollector,
+                            uint64_t nextSignalValue,
+                            const std::string& fileName) {
+  ObjData data;
+  if (!data.ParseObjFile(fileName)) {
+    return false;
+  }
+
+  if (data.m_groups.size() > 1) {
+    std::cout << "Warning: Only using the first group from the obj file, when there were actually "
+              << data.m_groups.size() << std::endl;
+  }
+
+  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups[0].indices);
+  return true;
 }
 
 D3D12_VERTEX_BUFFER_VIEW& Model::GetVertexBufferView() {

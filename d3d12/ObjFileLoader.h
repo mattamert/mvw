@@ -14,7 +14,7 @@ public:
   struct Group {
     // TODO: Material.
     std::string name;
-    std::vector<size_t> indices;
+    std::vector<uint32_t> indices;
   };
 
   std::vector<Vertex> m_vertices;

@@ -107,7 +107,11 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeAppObjects() {
-  m_cubeModel.InitCube(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue);
+  //m_cubeModel.InitCube(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue);
+  m_cubeModel.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
+                              //"C:\\Users\\Matt\\Documents\\Assets\\cube\\cube.obj");
+                              "C:\\Users\\Matt\\Documents\\Assets\\bunny\\bunny.obj");
+
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);

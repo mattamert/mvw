@@ -15,6 +15,7 @@ enum class DeclarationType {
   Normal,
   Face,
   Group,
+  Smooth,
   MTLLib,
   UseMTL,
 };
@@ -112,6 +113,8 @@ static bool ParseDeclarationType(char* decl, size_t length, DeclarationType* typ
     *type = DeclarationType::Face;
   } else if (length == 1 && strncmp(decl, "g", length) == 0) {
     *type = DeclarationType::Group;
+  } else if (length == 1 && strncmp(decl, "s", length) == 0) {
+    *type = DeclarationType::Smooth;
   } else if (length == 6 && strncmp(decl, "mtllib", length) == 0) {
     *type = DeclarationType::MTLLib;
   } else if (length == 6 && strncmp(decl, "usemtl", length) == 0) {
@@ -215,11 +218,10 @@ class ObjFileParser {
   std::vector<TexCoord> m_texCoords;
   std::vector<Normal> m_normals;
 
-  std::unordered_map<Indices, size_t, Indices::Hash> m_mapIndicesToVertexIndex;
+  std::unordered_map<Indices, uint32_t, Indices::Hash> m_mapIndicesToVertexIndex;
 
   void AddGroup(std::string&& groupName);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
-  // bool HandleFace(const std::vector<Indices>& face);
 
  public:
   bool Init(std::istream& input);
@@ -236,7 +238,7 @@ void ObjFileParser::AddGroup(std::string&& groupName) {
 
 bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
   // TODO: Generate normals if needed.
-  std::vector<size_t> vertexIndices;
+  std::vector<uint32_t> vertexIndices;
   for (const Indices indices : face) {
     assert(indices.posIndex > 0);
     // TODO: We should be able to handle the case where we don't have texture coordinates.
@@ -263,7 +265,7 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
 
       size_t vertexIndex = m_vertices.size() - 1;
       m_mapIndicesToVertexIndex[indices] = vertexIndex;
-      vertexIndices.push_back(vertexIndex);
+      vertexIndices.push_back((uint32_t)vertexIndex);
     } else {
       vertexIndices.push_back(iter->second);
     }
@@ -334,6 +336,9 @@ bool ObjFileParser::Init(std::istream& input) {
         if (!tokenizer.AcceptDouble(&coord.v))  // Second value is optional.
           coord.v = 0.;
 
+        double dummy;
+        (void)tokenizer.AcceptDouble(&dummy);  // Third value is allowed, but unused.
+
         // Always append a texcoord even if parsing failed, so that future indices do not get off.
         m_texCoords.push_back(coord);
       } break;
@@ -400,12 +405,19 @@ bool ObjFileParser::Init(std::istream& input) {
         }
       } break;
 
+      case DeclarationType::Smooth: {
+        // TODO: Should probably implement this...
+        // But for now, let's just igore it becaues ehh.
+        std::string dummy;
+        (void)tokenizer.AcceptString(&dummy);
+      } break;
+
       case DeclarationType::MTLLib:
-        std::cerr << "MTLLib not yet supported..." << std::endl;
+        std::cerr << "MTLLib not yet supported." << std::endl;
         break;
 
       case DeclarationType::UseMTL:
-        std::cerr << "UseMTL not yet supported..." << std::endl;
+        std::cerr << "UseMTL not yet supported." << std::endl;
         break;
 
       default:

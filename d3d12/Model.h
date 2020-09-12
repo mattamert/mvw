@@ -1,5 +1,6 @@
 #pragma once
 
+#include "d3d12/ObjFileLoader.h"
 #include "d3d12/ResourceGarbageCollector.h"
 
 #include <d3d12.h>
@@ -15,11 +16,25 @@ class Model {
 
   Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
+
+  void Init(ID3D12Device* device,
+            ID3D12GraphicsCommandList* cl,
+            ResourceGarbageCollector& garbageCollector,
+            uint64_t nextSignalValue,
+            const std::vector<ObjData::Vertex>& vertices,
+            const std::vector<uint32_t>& indices);
+
 public:
   void InitCube(ID3D12Device* device,
                 ID3D12GraphicsCommandList* cl,
                 ResourceGarbageCollector& garbageCollector,
                 uint64_t nextSignalValue);
+
+  bool InitFromObjFile(ID3D12Device* device,
+                       ID3D12GraphicsCommandList* cl,
+                       ResourceGarbageCollector& garbageCollector,
+                       uint64_t nextSignalValue,
+                       const std::string& fileName);
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
   D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView();
