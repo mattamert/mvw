@@ -68,40 +68,47 @@ size_t Indices::Hash::operator()(const Indices& indices) const {
   return hash;
 }
 
-class ObjLineTokenizer {
-  std::string m_line;
+class Tokenizer {
+  const std::vector<char> m_data;
   size_t m_index;
 
   void ConsumeWhitespace();
 
  public:
-  ObjLineTokenizer(std::string&& line);
+  Tokenizer(std::vector<char>&& file);
 
   bool AcceptDeclaration(DeclarationType* value);
   bool AcceptInteger(long long* value);
   bool AcceptDouble(double* value);
   bool AcceptIndexSeparator();
   bool AcceptString(std::string* value);
+  bool AcceptNewLine();
+  void ForceAcceptNewLine();
   bool IsAtEnd();
 };
 
-ObjLineTokenizer::ObjLineTokenizer(std::string&& line) : m_line(std::move(line)), m_index(0) {}
+Tokenizer::Tokenizer(std::vector<char>&& file) : m_data(std::move(file)), m_index(0) {}
 
+// NOTE: We don't consider a newline to be whitespace in this scenario, since it is used as a way to
+// denote a new statement.
 static bool IsWhitespace(char c) {
-  return (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\v');
+  return (c == ' ' || c == '\t' || c == '\r' || c == '\v');
 }
 
-void ObjLineTokenizer::ConsumeWhitespace() {
-  while (m_index < m_line.size() && IsWhitespace(m_line[m_index])) {
+void Tokenizer::ConsumeWhitespace() {
+  while (m_index < m_data.size() && IsWhitespace(m_data[m_index])) {
     m_index++;
   }
 
   // Parse comments.
-  if (m_index < m_line.size() && m_line[m_index] == '#')
-    m_index = m_line.size();
+  if (m_index < m_data.size() && m_data[m_index] == '#') {
+    while (m_index < m_data.size() && m_data[m_index] != '\n') {
+      m_index++;
+    }
+  }
 }
 
-static bool ParseDeclarationType(char* decl, size_t length, DeclarationType* type) {
+static bool ParseDeclarationType(const char* decl, size_t length, DeclarationType* type) {
   // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
   if (length == 2 && strncmp(decl, "vt", length) == 0) {
     *type = DeclarationType::TextureCoord;
@@ -126,15 +133,15 @@ static bool ParseDeclarationType(char* decl, size_t length, DeclarationType* typ
   return true;
 }
 
-bool ObjLineTokenizer::AcceptDeclaration(DeclarationType* value) {
+bool Tokenizer::AcceptDeclaration(DeclarationType* value) {
   ConsumeWhitespace();
   size_t start = m_index;
   size_t end = m_index;
-  while (end < m_line.size() && !IsWhitespace(m_line[end])) {
+  while (end < m_data.size() && !IsWhitespace(m_data[end]) && m_data[end] != '\n') {
     end++;
   }
 
-  if (ParseDeclarationType(&m_line[start], end - start, value)) {
+  if (ParseDeclarationType(&m_data[start], end - start, value)) {
     m_index = end;
     return true;
   }
@@ -142,10 +149,10 @@ bool ObjLineTokenizer::AcceptDeclaration(DeclarationType* value) {
   return false;
 }
 
-bool ObjLineTokenizer::AcceptInteger(long long* value) {
+bool Tokenizer::AcceptInteger(long long* value) {
   ConsumeWhitespace();
 
-  const char* startPtr = &m_line[m_index];
+  const char* startPtr = &m_data[m_index];
   char* endPtr;
   long long parsedValue = strtoll(startPtr, &endPtr, /*radix*/ 10);
 
@@ -159,10 +166,10 @@ bool ObjLineTokenizer::AcceptInteger(long long* value) {
   return false;
 }
 
-bool ObjLineTokenizer::AcceptDouble(double* value) {
+bool Tokenizer::AcceptDouble(double* value) {
   ConsumeWhitespace();
 
-  const char* startPtr = &m_line[m_index];
+  const char* startPtr = &m_data[m_index];
   char* endPtr;
   double parsedValue = strtod(startPtr, &endPtr);
 
@@ -175,8 +182,8 @@ bool ObjLineTokenizer::AcceptDouble(double* value) {
 
   return false;
 }
-bool ObjLineTokenizer::AcceptIndexSeparator() {
-  if (m_index < m_line.size() && m_line[m_index] == '/') {
+bool Tokenizer::AcceptIndexSeparator() {
+  if (m_index < m_data.size() && m_data[m_index] == '/') {
     m_index++;
     return true;
   }
@@ -184,17 +191,17 @@ bool ObjLineTokenizer::AcceptIndexSeparator() {
   return false;
 }
 
-bool ObjLineTokenizer::AcceptString(std::string* str) {
+bool Tokenizer::AcceptString(std::string* str) {
   ConsumeWhitespace();
   size_t start = m_index;
   size_t end = m_index;
-  while (end < m_line.size() && !IsWhitespace(m_line[end])) {
+  while (end < m_data.size() && !IsWhitespace(m_data[end]) && m_data[end] != '\n') {
     end++;
   }
 
   size_t length = end - start;
   if (length > 0) {
-    *str = std::string(m_line, start, end - start);
+    *str = std::string(m_data.data(), start, end - start);
     m_index = end;
     return true;
   }
@@ -202,9 +209,25 @@ bool ObjLineTokenizer::AcceptString(std::string* str) {
   return false;
 }
 
-bool ObjLineTokenizer::IsAtEnd() {
+bool Tokenizer::AcceptNewLine() {
   ConsumeWhitespace();
-  return m_index == m_line.size();
+  if (m_data[m_index] == '\n') {
+    m_index++;
+    return true;
+  }
+
+  return false;
+}
+
+void Tokenizer::ForceAcceptNewLine() {
+  while (m_index < m_data.size() && m_data[m_index] != '\n') {
+    m_index++;
+  }
+}
+
+bool Tokenizer::IsAtEnd() {
+  ConsumeWhitespace();
+  return m_index == m_data.size();
 }
 
 class ObjFileParser {
@@ -224,7 +247,7 @@ class ObjFileParser {
   bool AddVerticesFromFace(const std::vector<Indices>& face);
 
  public:
-  bool Init(std::istream& input);
+  bool Init(const std::string& filePath);
 
   std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
   std::vector<ObjData::Group>& GetGroups() { return m_groups; }
@@ -303,14 +326,20 @@ static bool ResolveRelativeIndex(long long index, size_t referenceSize, unsigned
   return true;
 }
 
-bool ObjFileParser::Init(std::istream& input) {
-  size_t currentLineNumber = 0;
-  std::string line;
-  while (std::getline(input, line)) {
-    currentLineNumber++;
+bool ObjFileParser::Init(const std::string& filePath) {
+  std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+  std::ifstream::pos_type fileSize = file.tellg();
+  file.seekg(0, std::ios::beg);
 
-    ObjLineTokenizer tokenizer(std::move(line));
-    if (tokenizer.IsAtEnd())
+  std::vector<char> fileContents(fileSize);
+  file.read(fileContents.data(), fileSize);
+  file.close();
+
+  Tokenizer tokenizer(std::move(fileContents));
+  size_t currentLineNumber = 0;
+  while (!tokenizer.IsAtEnd()) {
+    currentLineNumber++;
+    if (tokenizer.AcceptNewLine())
       continue;
 
     DeclarationType type;
@@ -425,9 +454,13 @@ bool ObjFileParser::Init(std::istream& input) {
         break;
     }
 
-    if (parseSucceeded && !tokenizer.IsAtEnd()) {
-      std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber << std::endl;
-    } else if (!parseSucceeded) {
+    if (parseSucceeded) {
+      if (!tokenizer.AcceptNewLine()) {
+        tokenizer.ForceAcceptNewLine();
+        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber
+                  << std::endl;
+      }
+    } else {
       std::cerr << "Parsing failed on line " << currentLineNumber << std::endl;
       return false;
     }
@@ -437,9 +470,8 @@ bool ObjFileParser::Init(std::istream& input) {
 }
 
 bool ObjData::ParseObjFile(const std::string& fileName) {
-  std::ifstream file(fileName);
   ObjFileParser parser;
-  if (!parser.Init(file))
+  if (!parser.Init(fileName))
     return false;
 
   m_vertices = std::move(parser.GetVertices());
