@@ -107,11 +107,17 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeAppObjects() {
-  //m_cubeModel.InitCube(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue);
-  m_cubeModel.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
-                              //"C:\\Users\\Matt\\Documents\\Assets\\cube\\cube.obj");
-                              "C:\\Users\\Matt\\Documents\\Assets\\bunny\\bunny.obj");
+  Model model;
+  model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
+                        //"C:\\Users\\Matt\\Documents\\Assets\\cube\\cube.obj");
+                        "C:\\Users\\Matt\\Documents\\Assets\\bunny\\bunny.obj");
 
+  m_object.model = std::move(model);
+  m_object.position = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_object.rotationY = 0;
+  m_object.scale = 1;
+
+  m_objectRotationAnimation = Animation::CreateAnimation(5000, /*repeat*/ true);
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -137,6 +143,10 @@ void DXApp::DrawScene() {
   HandleResizeIfNecessary();
   WaitForNextFrame();
 
+  // Update animation.
+  double progress = Animation::TickAnimation(m_objectRotationAnimation);
+  m_object.rotationY = progress * 2 * 3.14159265;
+
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_window.GetCurrentBackBufferRTVHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_window.GetDepthStencilViewHandle();
@@ -153,21 +163,23 @@ void DXApp::DrawScene() {
   DirectX::XMFLOAT4X4 viewPerspective4x4;
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
 
-  ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4, sizeof(viewPerspective4x4));
+  ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4,
+                               sizeof(viewPerspective4x4));
   m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMMATRIX identity = DirectX::XMMatrixIdentity();
-  DirectX::XMFLOAT4X4 identity4x4;
-  DirectX::XMStoreFloat4x4(&identity4x4, identity);
+  DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
+  DirectX::XMFLOAT4X4 modelTransform4x4;
+  DirectX::XMStoreFloat4x4(&modelTransform4x4, modelTransform);
 
-  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &identity4x4, sizeof(identity4x4));
+  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &modelTransform4x4,
+                               sizeof(modelTransform4x4));
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
-  ID3D12DescriptorHeap* heaps[] = {m_cubeModel.GetSRVDescriptorHeap()};
+  ID3D12DescriptorHeap* heaps[] = {m_object.model.GetSRVDescriptorHeap()};
   m_cl->SetDescriptorHeaps(1, heaps);
   m_cl->SetGraphicsRootDescriptorTable(
-      2, m_cubeModel.GetSRVDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
+      2, m_object.model.GetSRVDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
 
   // Resume scheduled programming.
 
@@ -189,10 +201,10 @@ void DXApp::DrawScene() {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &m_cubeModel.GetVertexBufferView());
-  m_cl->IASetIndexBuffer(&m_cubeModel.GetIndexBufferView());
+  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+  m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView());
 
-  m_cl->DrawIndexedInstanced(m_cubeModel.GetNumIndices(), 1, 0, 0, 0);
+  m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(), 1, 0, 0, 0);
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

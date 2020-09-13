@@ -4,6 +4,8 @@ executable("d3d12_renderer") {
   deps = [":d3d12_renderer_shaders"]
 
   sources = [
+    "Animation.cpp",
+    "Animation.h",
     "Camera.cpp",
     "Camera.h",
     "comhelper.h",
@@ -17,6 +19,8 @@ executable("d3d12_renderer") {
     "MessageQueue.h",
     "Model.cpp",
     "Model.h",
+    "Object.cpp",
+    "Object.h",
     "ObjFileLoader.cpp",
     "ObjFileLoader.h",
     "Pass.cpp",

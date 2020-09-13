@@ -49,6 +49,12 @@
     <ClCompile Include="..\..\d3d12\ObjFileLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\d3d12\Object.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\d3d12\Animation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\comhelper.h">
@@ -91,6 +97,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\ObjFileLoader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\d3d12\Object.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\d3d12\Animation.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

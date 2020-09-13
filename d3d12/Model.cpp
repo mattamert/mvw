@@ -76,7 +76,8 @@ void Model::Init(ID3D12Device* device,
   cl->ResourceBarrier(2, barriers);
 
   Image img;
-  HR(Image::LoadImageFile(L"C:\\Users\\Matt\\Documents\\Assets\\cube.png", &img));
+  //HR(Image::LoadImageFile(L"C:\\Users\\Matt\\Documents\\Assets\\cube.png", &img));
+  HR(Image::LoadImageFile(L"C:\\Users\\Matt\\Documents\\Assets\\cube\\default.png", &img));
 
   const size_t imgBufferSize = img.data.size();
   CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);

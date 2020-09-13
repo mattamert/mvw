@@ -8,8 +8,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "d3d12/Animation.h"
 #include "d3d12/Camera.h"
-#include "d3d12/Model.h"
+#include "d3d12/Object.h"
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceGarbageCollector.h"
 #include "d3d12/WindowTarget.h"
@@ -46,7 +47,8 @@ class DXApp {
   ResourceGarbageCollector m_garbageCollector;
 
   // App data.
-  Model m_cubeModel;
+  Object m_object;
+  Animation m_objectRotationAnimation;
 
   PinholeCamera m_camera;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;
