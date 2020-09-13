@@ -280,7 +280,7 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
       vertex.pos[1] = pos.y;
       vertex.pos[2] = pos.z;
       vertex.texCoord[0] = texCoord.u;
-      vertex.texCoord[1] = texCoord.v;
+      vertex.texCoord[1] = 1.0 - texCoord.v; // TODO: Is the flipping correct?
       vertex.normal[0] = normal.x;
       vertex.normal[1] = normal.y;
       vertex.normal[2] = normal.z;
