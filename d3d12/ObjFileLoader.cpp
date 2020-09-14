@@ -15,6 +15,7 @@ enum class DeclarationType {
   Normal,
   Face,
   Group,
+  Object,
   Smooth,
   MTLLib,
   UseMTL,
@@ -120,6 +121,8 @@ static bool ParseDeclarationType(const char* decl, size_t length, DeclarationTyp
     *type = DeclarationType::Face;
   } else if (length == 1 && strncmp(decl, "g", length) == 0) {
     *type = DeclarationType::Group;
+  } else if (length == 1 && strncmp(decl, "o", length) == 0) {
+    *type = DeclarationType::Object;
   } else if (length == 1 && strncmp(decl, "s", length) == 0) {
     *type = DeclarationType::Smooth;
   } else if (length == 6 && strncmp(decl, "mtllib", length) == 0) {
@@ -448,6 +451,12 @@ bool ObjFileParser::Init(const std::string& filePath) {
       case DeclarationType::UseMTL:
         std::cerr << "UseMTL not yet supported." << std::endl;
         break;
+
+      case DeclarationType::Object: {
+        std::cerr << "Warning: object declaration not really supported." << std::endl;
+        std::string objectName;
+        (void)tokenizer.AcceptString(&objectName);
+      } break;
 
       default:
         parseSucceeded = false;
