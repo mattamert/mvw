@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeOutput>$(NinjaDir)\$(NinjaTarget_d3d12_renderer).exe</NMakeOutput>
-    <NMakePreprocessorDefinitions>_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakePreprocessorDefinitions>_HAS_CXX17;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_d3d12_renderer)
 $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
