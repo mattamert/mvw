@@ -9,6 +9,28 @@
 #include <sstream>
 #include <unordered_map>
 
+namespace {
+bool LoadFile(const char* fileName, std::vector<char>* fileContents) {
+  std::ifstream file(fileName, std::ios::in | std::ios::binary | std::ios::ate);
+  if (!file.is_open())
+    return false;
+
+  std::ifstream::pos_type fileSize = file.tellg();
+  file.seekg(0, std::ios::beg);
+
+  std::vector<char> contents(fileSize);
+  file.read(contents.data(), fileSize);
+  size_t bytesRead = file.gcount();
+  file.close();
+
+  if (bytesRead != fileSize)
+    return false;
+
+  *fileContents = std::move(contents);
+  return true;
+}
+}
+
 enum class DeclarationType {
   Position,
   TextureCoord,
@@ -246,6 +268,8 @@ class ObjFileParser {
 
   std::unordered_map<Indices, uint32_t, Indices::Hash> m_mapIndicesToVertexIndex;
 
+  bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
+
   void AddGroup(std::string&& groupName);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
 
@@ -255,6 +279,11 @@ class ObjFileParser {
   std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
   std::vector<ObjData::Group>& GetGroups() { return m_groups; }
 };
+
+bool ObjFileParser::LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename) {
+  // TODO.
+  return true;
+}
 
 void ObjFileParser::AddGroup(std::string&& groupName) {
   m_groups.emplace_back();
@@ -330,13 +359,9 @@ static bool ResolveRelativeIndex(long long index, size_t referenceSize, unsigned
 }
 
 bool ObjFileParser::Init(const std::string& filePath) {
-  std::ifstream file(filePath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-  std::ifstream::pos_type fileSize = file.tellg();
-  file.seekg(0, std::ios::beg);
-
-  std::vector<char> fileContents(fileSize);
-  file.read(fileContents.data(), fileSize);
-  file.close();
+  std::vector<char> fileContents;
+  if (!LoadFile(filePath.c_str(), &fileContents))
+    return false;
 
   Tokenizer tokenizer(std::move(fileContents));
   size_t currentLineNumber = 0;
@@ -444,13 +469,17 @@ bool ObjFileParser::Init(const std::string& filePath) {
         (void)tokenizer.AcceptString(&dummy);
       } break;
 
-      case DeclarationType::MTLLib:
-        std::cerr << "MTLLib not yet supported." << std::endl;
-        break;
+      case DeclarationType::MTLLib: {
+        std::string mtlLibFilename;
+        parseSucceeded = tokenizer.AcceptString(&mtlLibFilename);
+        if (parseSucceeded) {
+          parseSucceeded = LoadMtlLib(filePath, mtlLibFilename);
+        }
+      } break;
 
-      case DeclarationType::UseMTL:
+      case DeclarationType::UseMTL: {
         std::cerr << "UseMTL not yet supported." << std::endl;
-        break;
+      } break;
 
       case DeclarationType::Object: {
         std::cerr << "Warning: object declaration not really supported." << std::endl;
