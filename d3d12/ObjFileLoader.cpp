@@ -31,7 +31,7 @@ bool LoadFile(const char* fileName, std::vector<char>* fileContents) {
 }
 }
 
-enum class DeclarationType {
+enum class ObjDeclarationType {
   Position,
   TextureCoord,
   Normal,
@@ -41,6 +41,37 @@ enum class DeclarationType {
   Smooth,
   MTLLib,
   UseMTL,
+};
+
+enum class MtlDeclarationType {
+  NewMaterial,
+
+  AmbientColor,
+  DiffuseColor,
+  SpecularColor,
+  SpecularExponent,
+
+  Dissolve,
+  Transparency, // Equivalent to (1 - Dissolve).
+
+  TransmissionFilter,
+  Sharpness,
+  IndexOfRefraction,
+
+  IlluminationModel,
+
+  AmbientMap,
+  DiffuseMap,
+  SpecularMap,
+  SpecularExponentMap,
+  DissolveMap,
+
+  AntiAliasing,
+  Decal,
+
+  DisplacementMap,
+  BumpMap,
+  ReflectionMap,
 };
 
 struct Position {
@@ -91,6 +122,7 @@ size_t Indices::Hash::operator()(const Indices& indices) const {
   return hash;
 }
 
+// ------------------------------------------------------------------------------------------------
 class Tokenizer {
   const std::vector<char> m_data;
   size_t m_index;
@@ -100,7 +132,7 @@ class Tokenizer {
  public:
   Tokenizer(std::vector<char>&& file);
 
-  bool AcceptDeclaration(DeclarationType* value);
+  bool AcceptDeclaration(ObjDeclarationType* value);
   bool AcceptInteger(long long* value);
   bool AcceptDouble(double* value);
   bool AcceptIndexSeparator();
@@ -131,26 +163,26 @@ void Tokenizer::ConsumeWhitespace() {
   }
 }
 
-static bool ParseDeclarationType(const char* decl, size_t length, DeclarationType* type) {
+static bool ParseDeclarationType(const char* decl, size_t length, ObjDeclarationType* type) {
   // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
   if (length == 2 && strncmp(decl, "vt", length) == 0) {
-    *type = DeclarationType::TextureCoord;
+    *type = ObjDeclarationType::TextureCoord;
   } else if (length == 2 && strncmp(decl, "vn", length) == 0) {
-    *type = DeclarationType::Normal;
+    *type = ObjDeclarationType::Normal;
   } else if (length == 1 && strncmp(decl, "v", length) == 0) {
-    *type = DeclarationType::Position;
+    *type = ObjDeclarationType::Position;
   } else if (length == 1 && strncmp(decl, "f", length) == 0) {
-    *type = DeclarationType::Face;
+    *type = ObjDeclarationType::Face;
   } else if (length == 1 && strncmp(decl, "g", length) == 0) {
-    *type = DeclarationType::Group;
+    *type = ObjDeclarationType::Group;
   } else if (length == 1 && strncmp(decl, "o", length) == 0) {
-    *type = DeclarationType::Object;
+    *type = ObjDeclarationType::Object;
   } else if (length == 1 && strncmp(decl, "s", length) == 0) {
-    *type = DeclarationType::Smooth;
+    *type = ObjDeclarationType::Smooth;
   } else if (length == 6 && strncmp(decl, "mtllib", length) == 0) {
-    *type = DeclarationType::MTLLib;
+    *type = ObjDeclarationType::MTLLib;
   } else if (length == 6 && strncmp(decl, "usemtl", length) == 0) {
-    *type = DeclarationType::UseMTL;
+    *type = ObjDeclarationType::UseMTL;
   } else {
     return false;
   }
@@ -158,7 +190,7 @@ static bool ParseDeclarationType(const char* decl, size_t length, DeclarationTyp
   return true;
 }
 
-bool Tokenizer::AcceptDeclaration(DeclarationType* value) {
+bool Tokenizer::AcceptDeclaration(ObjDeclarationType* value) {
   ConsumeWhitespace();
   size_t start = m_index;
   size_t end = m_index;
@@ -255,6 +287,7 @@ bool Tokenizer::IsAtEnd() {
   return m_index == m_data.size();
 }
 
+// ------------------------------------------------------------------------------------------------
 class ObjFileParser {
   // Overall result.
   std::vector<ObjData::Vertex> m_vertices;
@@ -370,7 +403,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
     if (tokenizer.AcceptNewLine())
       continue;
 
-    DeclarationType type;
+    ObjDeclarationType type;
     bool parseSucceeded = tokenizer.AcceptDeclaration(&type);
     if (!parseSucceeded) {
       std::cerr << "Unrecognized declaration" << std::endl;
@@ -378,7 +411,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
     }
 
     switch (type) {
-      case DeclarationType::Position: {
+      case ObjDeclarationType::Position: {
         Position pos = {};
         parseSucceeded &= tokenizer.AcceptDouble(&pos.x);
         parseSucceeded &= tokenizer.AcceptDouble(&pos.y);
@@ -387,7 +420,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         m_positions.push_back(pos);
       } break;
 
-      case DeclarationType::TextureCoord: {
+      case ObjDeclarationType::TextureCoord: {
         TexCoord coord = {};
         parseSucceeded &= tokenizer.AcceptDouble(&coord.u);
         if (!tokenizer.AcceptDouble(&coord.v))  // Second value is optional.
@@ -400,7 +433,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         m_texCoords.push_back(coord);
       } break;
 
-      case DeclarationType::Normal: {
+      case ObjDeclarationType::Normal: {
         Normal normal = {};
         parseSucceeded &= tokenizer.AcceptDouble(&normal.x);
         parseSucceeded &= tokenizer.AcceptDouble(&normal.y);
@@ -409,7 +442,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         m_normals.push_back(normal);
       } break;
 
-      case DeclarationType::Face: {
+      case ObjDeclarationType::Face: {
         std::vector<Indices> indices;
         for (;;) {
           long long posIndex = 0;
@@ -442,7 +475,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         }
       } break;
 
-      case DeclarationType::Group: {
+      case ObjDeclarationType::Group: {
         std::vector<std::string> groupNames;
         std::string currentName;
         while (tokenizer.AcceptString(&currentName)) {
@@ -462,14 +495,14 @@ bool ObjFileParser::Init(const std::string& filePath) {
         }
       } break;
 
-      case DeclarationType::Smooth: {
+      case ObjDeclarationType::Smooth: {
         // TODO: Should probably implement this...
         // But for now, let's just igore it becaues ehh.
         std::string dummy;
         (void)tokenizer.AcceptString(&dummy);
       } break;
 
-      case DeclarationType::MTLLib: {
+      case ObjDeclarationType::MTLLib: {
         std::string mtlLibFilename;
         parseSucceeded = tokenizer.AcceptString(&mtlLibFilename);
         if (parseSucceeded) {
@@ -477,11 +510,11 @@ bool ObjFileParser::Init(const std::string& filePath) {
         }
       } break;
 
-      case DeclarationType::UseMTL: {
+      case ObjDeclarationType::UseMTL: {
         std::cerr << "UseMTL not yet supported." << std::endl;
       } break;
 
-      case DeclarationType::Object: {
+      case ObjDeclarationType::Object: {
         std::cerr << "Warning: object declaration not really supported." << std::endl;
         std::string objectName;
         (void)tokenizer.AcceptString(&objectName);
