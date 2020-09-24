@@ -132,7 +132,8 @@ class Tokenizer {
  public:
   Tokenizer(std::vector<char>&& file);
 
-  bool AcceptDeclaration(ObjDeclarationType* value);
+  bool AcceptObjDeclaration(ObjDeclarationType* value);
+  bool AcceptMtlDeclaration(MtlDeclarationType* value);
   bool AcceptInteger(long long* value);
   bool AcceptDouble(double* value);
   bool AcceptIndexSeparator();
@@ -163,7 +164,7 @@ void Tokenizer::ConsumeWhitespace() {
   }
 }
 
-static bool ParseDeclarationType(const char* decl, size_t length, ObjDeclarationType* type) {
+static bool ParseObjDeclarationType(const char* decl, size_t length, ObjDeclarationType* type) {
   // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
   if (length == 2 && strncmp(decl, "vt", length) == 0) {
     *type = ObjDeclarationType::TextureCoord;
@@ -190,7 +191,7 @@ static bool ParseDeclarationType(const char* decl, size_t length, ObjDeclaration
   return true;
 }
 
-bool Tokenizer::AcceptDeclaration(ObjDeclarationType* value) {
+bool Tokenizer::AcceptObjDeclaration(ObjDeclarationType* value) {
   ConsumeWhitespace();
   size_t start = m_index;
   size_t end = m_index;
@@ -198,7 +199,72 @@ bool Tokenizer::AcceptDeclaration(ObjDeclarationType* value) {
     end++;
   }
 
-  if (ParseDeclarationType(&m_data[start], end - start, value)) {
+  if (ParseObjDeclarationType(&m_data[start], end - start, value)) {
+    m_index = end;
+    return true;
+  }
+
+  return false;
+}
+
+static bool ParseMtlDeclarationType(const char* decl, size_t length, MtlDeclarationType* type) {
+  // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
+  if (length == 2 && strncmp(decl, "Ka", length) == 0) {
+    *type = MtlDeclarationType::AmbientColor;
+  } else if (length == 2 && strncmp(decl, "Kd", length) == 0) {
+    *type = MtlDeclarationType::DiffuseColor;
+  } else if (length == 2 && strncmp(decl, "Ks", length) == 0) {
+    *type = MtlDeclarationType::SpecularColor;
+  } else if (length == 2 && strncmp(decl, "Ns", length) == 0) {
+    *type = MtlDeclarationType::SpecularExponent;
+  } else if (length == 2 && strncmp(decl, "Tf", length) == 0) {
+    *type = MtlDeclarationType::TransmissionFilter;
+  } else if (length == 5 && strncmp(decl, "illum", length) == 0) {
+    *type = MtlDeclarationType::IlluminationModel;
+  } else if (length == 1 && strncmp(decl, "d", length) == 0) {
+    *type = MtlDeclarationType::Dissolve;
+  } else if (length == 2 && strncmp(decl, "Tr", length) == 0) {
+    *type = MtlDeclarationType::Transparency;
+  } else if (length == 9 && strncmp(decl, "sharpness", length) == 0) {
+    *type = MtlDeclarationType::Sharpness;
+  } else if (length == 2 && strncmp(decl, "Ni", length) == 0) {
+    *type = MtlDeclarationType::IndexOfRefraction;
+  } else if (length == 6 && strncmp(decl, "map_Ka", length) == 0) {
+    *type = MtlDeclarationType::AmbientMap;
+  } else if (length == 6 && strncmp(decl, "map_Kd", length) == 0) {
+    *type = MtlDeclarationType::DiffuseMap;
+  } else if (length == 6 && strncmp(decl, "map_Ks", length) == 0) {
+    *type = MtlDeclarationType::SpecularMap;
+  } else if (length == 6 && strncmp(decl, "map_Ns", length) == 0) {
+    *type = MtlDeclarationType::SpecularExponentMap;
+  } else if (length == 5 && strncmp(decl, "map_d", length) == 0) {
+    *type = MtlDeclarationType::DissolveMap;
+  } else if (length == 7 && strncmp(decl, "map_aat", length) == 0) {
+    *type = MtlDeclarationType::AntiAliasing;
+  } else if (length == 5 && strncmp(decl, "decal", length) == 0) {
+    *type = MtlDeclarationType::Decal;
+  } else if (length == 4 && strncmp(decl, "disp", length) == 0) {
+    *type = MtlDeclarationType::DisplacementMap;
+  } else if (length == 4 && strncmp(decl, "bump", length) == 0) {
+    *type = MtlDeclarationType::BumpMap;
+  } else if (length == 4 && strncmp(decl, "refl", length) == 0) {
+    *type = MtlDeclarationType::ReflectionMap;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+bool Tokenizer::AcceptMtlDeclaration(MtlDeclarationType* value) {
+  ConsumeWhitespace();
+  size_t start = m_index;
+  size_t end = m_index;
+  while (end < m_data.size() && !IsWhitespace(m_data[end]) && m_data[end] != '\n') {
+    end++;
+  }
+
+  if (ParseMtlDeclarationType(&m_data[start], end - start, value)) {
     m_index = end;
     return true;
   }
@@ -404,7 +470,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
       continue;
 
     ObjDeclarationType type;
-    bool parseSucceeded = tokenizer.AcceptDeclaration(&type);
+    bool parseSucceeded = tokenizer.AcceptObjDeclaration(&type);
     if (!parseSucceeded) {
       std::cerr << "Unrecognized declaration" << std::endl;
       continue;
