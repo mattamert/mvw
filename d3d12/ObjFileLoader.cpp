@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <fstream>
 #include <optional>
-#include <sstream>
+#include <string_view>
 #include <unordered_map>
 
 namespace {
@@ -164,25 +164,24 @@ void Tokenizer::ConsumeWhitespace() {
   }
 }
 
-static bool ParseObjDeclarationType(const char* decl, size_t length, ObjDeclarationType* type) {
-  // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
-  if (length == 2 && strncmp(decl, "vt", length) == 0) {
+static bool ParseObjDeclarationType(const std::string_view& decl, ObjDeclarationType* type) {
+  if (decl == "vt") {
     *type = ObjDeclarationType::TextureCoord;
-  } else if (length == 2 && strncmp(decl, "vn", length) == 0) {
+  } else if (decl == "vn") {
     *type = ObjDeclarationType::Normal;
-  } else if (length == 1 && strncmp(decl, "v", length) == 0) {
+  } else if (decl == "v") {
     *type = ObjDeclarationType::Position;
-  } else if (length == 1 && strncmp(decl, "f", length) == 0) {
+  } else if (decl == "f") {
     *type = ObjDeclarationType::Face;
-  } else if (length == 1 && strncmp(decl, "g", length) == 0) {
+  } else if (decl == "g") {
     *type = ObjDeclarationType::Group;
-  } else if (length == 1 && strncmp(decl, "o", length) == 0) {
+  } else if (decl == "o") {
     *type = ObjDeclarationType::Object;
-  } else if (length == 1 && strncmp(decl, "s", length) == 0) {
+  } else if (decl == "s") {
     *type = ObjDeclarationType::Smooth;
-  } else if (length == 6 && strncmp(decl, "mtllib", length) == 0) {
+  } else if (decl == "mtllib") {
     *type = ObjDeclarationType::MTLLib;
-  } else if (length == 6 && strncmp(decl, "usemtl", length) == 0) {
+  } else if (decl == "usemtl") {
     *type = ObjDeclarationType::UseMTL;
   } else {
     return false;
@@ -199,7 +198,8 @@ bool Tokenizer::AcceptObjDeclaration(ObjDeclarationType* value) {
     end++;
   }
 
-  if (ParseObjDeclarationType(&m_data[start], end - start, value)) {
+  std::string_view declString(&m_data[start], end - start);
+  if (ParseObjDeclarationType(declString, value)) {
     m_index = end;
     return true;
   }
@@ -207,49 +207,48 @@ bool Tokenizer::AcceptObjDeclaration(ObjDeclarationType* value) {
   return false;
 }
 
-static bool ParseMtlDeclarationType(const char* decl, size_t length, MtlDeclarationType* type) {
-  // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
-  if (length == 6 && strncmp(decl, "newmtl", length) == 0) {
+static bool ParseMtlDeclarationType(const std::string_view& decl, MtlDeclarationType* type) {
+  if (decl == "newmtl") {
     *type = MtlDeclarationType::NewMaterial;
-  } else if (length == 2 && strncmp(decl, "Ka", length) == 0) {
+  } else if (decl == "Ka") {
     *type = MtlDeclarationType::AmbientColor;
-  } else if (length == 2 && strncmp(decl, "Kd", length) == 0) {
+  } else if (decl == "Kd") {
     *type = MtlDeclarationType::DiffuseColor;
-  } else if (length == 2 && strncmp(decl, "Ks", length) == 0) {
+  } else if (decl == "Ks") {
     *type = MtlDeclarationType::SpecularColor;
-  } else if (length == 2 && strncmp(decl, "Ns", length) == 0) {
+  } else if (decl == "Ns") {
     *type = MtlDeclarationType::SpecularExponent;
-  } else if (length == 2 && strncmp(decl, "Tf", length) == 0) {
+  } else if (decl == "Tf") {
     *type = MtlDeclarationType::TransmissionFilter;
-  } else if (length == 5 && strncmp(decl, "illum", length) == 0) {
+  } else if (decl == "illum") {
     *type = MtlDeclarationType::IlluminationModel;
-  } else if (length == 1 && strncmp(decl, "d", length) == 0) {
+  } else if (decl == "d") {
     *type = MtlDeclarationType::Dissolve;
-  } else if (length == 2 && strncmp(decl, "Tr", length) == 0) {
+  } else if (decl == "Tr") {
     *type = MtlDeclarationType::Transparency;
-  } else if (length == 9 && strncmp(decl, "sharpness", length) == 0) {
+  } else if (decl == "sharpness") {
     *type = MtlDeclarationType::Sharpness;
-  } else if (length == 2 && strncmp(decl, "Ni", length) == 0) {
+  } else if (decl == "Ni") {
     *type = MtlDeclarationType::IndexOfRefraction;
-  } else if (length == 6 && strncmp(decl, "map_Ka", length) == 0) {
+  } else if (decl == "map_Ka") {
     *type = MtlDeclarationType::AmbientMap;
-  } else if (length == 6 && strncmp(decl, "map_Kd", length) == 0) {
+  } else if (decl == "map_Kd") {
     *type = MtlDeclarationType::DiffuseMap;
-  } else if (length == 6 && strncmp(decl, "map_Ks", length) == 0) {
+  } else if (decl == "map_Ks") {
     *type = MtlDeclarationType::SpecularMap;
-  } else if (length == 6 && strncmp(decl, "map_Ns", length) == 0) {
+  } else if (decl == "map_Ns") {
     *type = MtlDeclarationType::SpecularExponentMap;
-  } else if (length == 5 && strncmp(decl, "map_d", length) == 0) {
+  } else if (decl == "map_d") {
     *type = MtlDeclarationType::DissolveMap;
-  } else if (length == 7 && strncmp(decl, "map_aat", length) == 0) {
+  } else if (decl == "map_aat") {
     *type = MtlDeclarationType::AntiAliasing;
-  } else if (length == 5 && strncmp(decl, "decal", length) == 0) {
+  } else if (decl == "decal") {
     *type = MtlDeclarationType::Decal;
-  } else if (length == 4 && strncmp(decl, "disp", length) == 0) {
+  } else if (decl == "disp") {
     *type = MtlDeclarationType::DisplacementMap;
-  } else if (length == 4 && strncmp(decl, "bump", length) == 0) {
+  } else if (decl == "bump") {
     *type = MtlDeclarationType::BumpMap;
-  } else if (length == 4 && strncmp(decl, "refl", length) == 0) {
+  } else if (decl == "refl") {
     *type = MtlDeclarationType::ReflectionMap;
   } else {
     return false;
@@ -266,7 +265,8 @@ bool Tokenizer::AcceptMtlDeclaration(MtlDeclarationType* value) {
     end++;
   }
 
-  if (ParseMtlDeclarationType(&m_data[start], end - start, value)) {
+  std::string_view declString(&m_data[start], end - start);
+  if (ParseMtlDeclarationType(declString, value)) {
     m_index = end;
     return true;
   }
