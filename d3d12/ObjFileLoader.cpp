@@ -209,7 +209,9 @@ bool Tokenizer::AcceptObjDeclaration(ObjDeclarationType* value) {
 
 static bool ParseMtlDeclarationType(const char* decl, size_t length, MtlDeclarationType* type) {
   // strncmp doesn't quite work how I thought it should, so we need to compare the length as well.
-  if (length == 2 && strncmp(decl, "Ka", length) == 0) {
+  if (length == 6 && strncmp(decl, "newmtl", length) == 0) {
+    *type = MtlDeclarationType::NewMaterial;
+  } else if (length == 2 && strncmp(decl, "Ka", length) == 0) {
     *type = MtlDeclarationType::AmbientColor;
   } else if (length == 2 && strncmp(decl, "Kd", length) == 0) {
     *type = MtlDeclarationType::DiffuseColor;
@@ -352,6 +354,12 @@ bool Tokenizer::IsAtEnd() {
   ConsumeWhitespace();
   return m_index == m_data.size();
 }
+
+// ------------------------------------------------------------------------------------------------
+class MtlFileParser {
+public:
+  bool Init(const std::string& fileName);
+};
 
 // ------------------------------------------------------------------------------------------------
 class ObjFileParser {
