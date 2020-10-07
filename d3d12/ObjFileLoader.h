@@ -109,7 +109,5 @@ public:
   std::vector<Group> m_groups;
   std::vector<Material> m_materials;
 
-  // TODO: Materials.
-
   bool ParseObjFile(const std::string& fileName);
 };
