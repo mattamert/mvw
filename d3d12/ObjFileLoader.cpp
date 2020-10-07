@@ -31,17 +31,20 @@ bool LoadFile(const char* fileName, std::vector<char>* fileContents) {
 }
 }
 
-enum class ObjDeclarationType {
-  Position,
-  TextureCoord,
-  Normal,
-  Face,
-  Group,
-  Object,
-  Smooth,
-  MTLLib,
-  UseMTL,
-};
+// TODO: Texture options are not yet supported.
+//enum class TextureOption {
+//  BlendU,
+//  BlendV,
+//  BumpMultiplier,
+//  BoostValue,
+//  ColorCorrection,
+//  Clamp,
+//  IMFChannel,
+//  TextureOrigin,
+//  TextureSize,
+//  Turbulance,
+//  TextureResolution,
+//};
 
 enum class MtlDeclarationType {
   NewMaterial,
@@ -53,7 +56,6 @@ enum class MtlDeclarationType {
 
   Dissolve,
   Transparency, // Equivalent to (1 - Dissolve).
-
   TransmissionFilter,
   Sharpness,
   IndexOfRefraction,
@@ -72,6 +74,18 @@ enum class MtlDeclarationType {
   DisplacementMap,
   BumpMap,
   ReflectionMap,
+};
+
+enum class ObjDeclarationType {
+  Position,
+  TextureCoord,
+  Normal,
+  Face,
+  Group,
+  Object,
+  Smooth,
+  MTLLib,
+  UseMTL,
 };
 
 struct Position {
@@ -307,6 +321,7 @@ bool Tokenizer::AcceptDouble(double* value) {
 
   return false;
 }
+
 bool Tokenizer::AcceptIndexSeparator() {
   if (m_index < m_data.size() && m_data[m_index] == '/') {
     m_index++;
@@ -357,25 +372,243 @@ bool Tokenizer::IsAtEnd() {
 
 // ------------------------------------------------------------------------------------------------
 class MtlFileParser {
-public:
-  bool Init(const std::string& fileName);
+  // Overall output.
+  std::vector<ObjData::Material> m_materials;
+
+  // Only used for parsing.
+  ObjData::Material* m_currentMaterial = nullptr;
+
+  static bool ParseColor(Tokenizer& tokenizer, ObjData::Color* color);
+  static bool ParseTexture(Tokenizer& tokenizer,
+                           const std::filesystem::path& containingPath,
+                           ObjData::Texture* texture);
+
+ public:
+  bool Parse(const std::string& fileName);
+
+  std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
 };
+
+/*static*/
+bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjData::Color* color) {
+  double parsedColor[3];
+  if (!tokenizer.AcceptDouble(&parsedColor[0])) {
+    std::string str;
+    if (tokenizer.AcceptString(&str)) {
+      if (str == "specular")
+        std::cerr << "This parser does not support 'specular' colors." << std::endl;
+      else if (str == "xyz")
+        std::cerr << "This parser does not support 'xyz' colors." << std::endl;
+      else
+        std::cerr << "Unknown string when parsing a color: '" << str << "'." << std::endl;
+    }
+
+    return false;
+  }
+
+  if (!tokenizer.AcceptDouble(&parsedColor[1])) {
+    color[1] = color[0];
+  }
+
+  if (!tokenizer.AcceptDouble(&parsedColor[2])) {
+    color[2] = color[1];
+  }
+
+  color->r = (float)parsedColor[0];
+  color->g = (float)parsedColor[1];
+  color->b = (float)parsedColor[2];
+  return true;
+}
+
+bool MtlFileParser::ParseTexture(Tokenizer& tokenizer,
+                                 const std::filesystem::path& containingPath,
+                                 ObjData::Texture* texture) {
+  // TODO: Support texture options.
+  // For now, just parse the file name/path.
+  std::string filename;
+  if (tokenizer.AcceptString(&filename)) {
+    texture->file = containingPath / filename;
+    return true;
+  }
+
+  return false;
+}
+
+static void EmitNotSupportedMessage(size_t lineNumber, const char* prop) {
+  std::cerr << "Line " << lineNumber << ". Warning: " << prop << " is not supported." << std::endl;
+}
+
+bool MtlFileParser::Parse(const std::string& filePath) {
+  std::vector<char> fileContents;
+  if (!LoadFile(filePath.c_str(), &fileContents))
+    return false;
+
+  std::filesystem::path containingPath = std::filesystem::path(filePath).parent_path();
+
+  Tokenizer tokenizer(std::move(fileContents));
+  size_t currentLineNumber = 0;
+  while (!tokenizer.IsAtEnd()) {
+    currentLineNumber++;
+    if (tokenizer.AcceptNewLine())
+      continue;
+
+    MtlDeclarationType type;
+    bool parseSucceeded = tokenizer.AcceptMtlDeclaration(&type);
+    if (!parseSucceeded) {
+      std::string unrecognizedDeclaration;
+      (void)tokenizer.AcceptString(&unrecognizedDeclaration);
+      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration "
+                << unrecognizedDeclaration << std::endl;
+      tokenizer.ForceAcceptNewLine();
+      continue;
+    }
+
+    if (type != MtlDeclarationType::NewMaterial && !m_currentMaterial) {
+      std::cerr << "Line " << currentLineNumber << ": A material has not yet been set. Skipping."
+                << std::endl;
+      tokenizer.ForceAcceptNewLine();
+      continue;
+    }
+
+    assert(type == MtlDeclarationType::NewMaterial || m_currentMaterial);
+    switch (type) {
+      case MtlDeclarationType::NewMaterial:
+        m_materials.emplace_back();
+        m_currentMaterial = &m_materials.back();
+        parseSucceeded &= tokenizer.AcceptString(&m_currentMaterial->name);
+        break;
+      case MtlDeclarationType::AmbientColor:
+        parseSucceeded &= ParseColor(tokenizer, &m_currentMaterial->ambientColor);
+        break;
+      case MtlDeclarationType::DiffuseColor:
+        parseSucceeded &= ParseColor(tokenizer, &m_currentMaterial->diffuseColor);
+        break;
+      case MtlDeclarationType::SpecularColor:
+        parseSucceeded &= ParseColor(tokenizer, &m_currentMaterial->specularColor);
+        break;
+      case MtlDeclarationType::SpecularExponent: {
+        double parsedSpecularExponent = 0.0;
+        parseSucceeded &= tokenizer.AcceptDouble(&parsedSpecularExponent);
+        m_currentMaterial->specularExponent = (float)parsedSpecularExponent;
+      } break;
+      case MtlDeclarationType::DiffuseMap:
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &m_currentMaterial->diffuseMap);
+        break;
+
+      case MtlDeclarationType::Dissolve: {
+        EmitNotSupportedMessage(currentLineNumber, "dissolve");
+        double parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+      } break;
+      case MtlDeclarationType::Transparency: {
+        EmitNotSupportedMessage(currentLineNumber, "transparancy");
+        double parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+      } break;
+      case MtlDeclarationType::TransmissionFilter: {
+        EmitNotSupportedMessage(currentLineNumber, "transmission filter");
+        ObjData::Color color;
+        parseSucceeded &= ParseColor(tokenizer, &color);
+      } break;
+
+      case MtlDeclarationType::Sharpness: {
+        EmitNotSupportedMessage(currentLineNumber, "sharpness");
+        double parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+      } break;
+      case MtlDeclarationType::IndexOfRefraction: {
+        EmitNotSupportedMessage(currentLineNumber, "index of refraction");
+        double parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+      } break;
+
+      case MtlDeclarationType::IlluminationModel: {
+        EmitNotSupportedMessage(currentLineNumber, "illumination model");
+        long long parsedValue = 0ll;
+        parseSucceeded &= tokenizer.AcceptInteger(&parsedValue);
+      } break;
+      case MtlDeclarationType::AntiAliasing: {
+        EmitNotSupportedMessage(currentLineNumber, "anti aliasing");
+        std::string onOrOff;
+        tokenizer.AcceptString(&onOrOff);
+      } break;
+
+      case MtlDeclarationType::AmbientMap: {
+        EmitNotSupportedMessage(currentLineNumber, "ambient map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::SpecularMap: {
+        EmitNotSupportedMessage(currentLineNumber, "specular map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::SpecularExponentMap: {
+        EmitNotSupportedMessage(currentLineNumber, "specular exponent map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::DissolveMap: {
+        EmitNotSupportedMessage(currentLineNumber, "dissolve map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::Decal: {
+        EmitNotSupportedMessage(currentLineNumber, "decal map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::DisplacementMap: {
+        EmitNotSupportedMessage(currentLineNumber, "displacement map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::BumpMap: {
+        EmitNotSupportedMessage(currentLineNumber, "bump map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      case MtlDeclarationType::ReflectionMap: {
+        EmitNotSupportedMessage(currentLineNumber, "reflection map");
+        ObjData::Texture fakeTexture;
+        parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
+      } break;
+      default:
+        assert(false);
+        break;
+    }
+
+    if (parseSucceeded) {
+      if (!tokenizer.AcceptNewLine()) {
+        tokenizer.ForceAcceptNewLine();
+        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber
+                  << std::endl;
+      }
+    } else {
+      std::cerr << "Parsing failed on line " << currentLineNumber << std::endl;
+      return false;
+    }
+  }
+
+  return true;
+}
 
 // ------------------------------------------------------------------------------------------------
 class ObjFileParser {
   // Overall result.
   std::vector<ObjData::Vertex> m_vertices;
   std::vector<ObjData::Group> m_groups;
+  std::vector<ObjData::Material> m_materials;
 
   // Only used for parsing.
   ObjData::Group* m_currentGroup = nullptr;
   std::vector<Position> m_positions;
   std::vector<TexCoord> m_texCoords;
   std::vector<Normal> m_normals;
-
   std::unordered_map<Indices, uint32_t, Indices::Hash> m_mapIndicesToVertexIndex;
 
   bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
+  int FindMaterialIndex(const std::string& materialName);
 
   void AddGroup(std::string&& groupName);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
@@ -385,11 +618,34 @@ class ObjFileParser {
 
   std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
   std::vector<ObjData::Group>& GetGroups() { return m_groups; }
+  std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
 };
 
 bool ObjFileParser::LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename) {
-  // TODO.
-  return true;
+  // I believe the mtl file specified must be relative to the obj file?
+  std::filesystem::path objFilePath(objFilename);
+  std::filesystem::path mtlFilePath = objFilePath.parent_path() / mtlLibFilename;
+  if (std::filesystem::exists(mtlFilePath)) {
+    MtlFileParser parser;
+    if (parser.Parse(mtlFilePath.string())) {
+      std::vector<ObjData::Material>& parsedMaterials = parser.GetMaterials();
+      std::move(parsedMaterials.begin(), parsedMaterials.end(), std::back_inserter(m_materials));
+      parsedMaterials.clear();
+      return true;
+    }
+  }
+
+  return false;
+}
+
+int ObjFileParser::FindMaterialIndex(const std::string& materialName) {
+  // For now, just do a linear search. If this is a bottleneck, use an unordered map.
+  for (size_t i = 0; i < m_materials.size(); ++i) {
+    if (m_materials[i].name == materialName)
+      return (int)i;
+  }
+
+  return -1;
 }
 
 void ObjFileParser::AddGroup(std::string&& groupName) {
@@ -585,7 +841,16 @@ bool ObjFileParser::Init(const std::string& filePath) {
       } break;
 
       case ObjDeclarationType::UseMTL: {
-        std::cerr << "UseMTL not yet supported." << std::endl;
+        std::string materialName;
+        parseSucceeded &= tokenizer.AcceptString(&materialName);
+        if (parseSucceeded) {
+          int materialIndex = FindMaterialIndex(materialName);
+          if (materialIndex < 0) {
+            std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
+                      << materialName << "." << std::endl;
+          }
+          m_currentGroup->materialIndex = materialIndex;
+        }
       } break;
 
       case ObjDeclarationType::Object: {
@@ -621,6 +886,7 @@ bool ObjData::ParseObjFile(const std::string& fileName) {
 
   m_vertices = std::move(parser.GetVertices());
   m_groups = std::move(parser.GetGroups());
+  m_materials = std::move(parser.GetMaterials());
   return true;
 }
 

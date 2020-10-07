@@ -1,24 +1,96 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 class ObjData {
 public:
+  // TODO: Currently, none of the texture maps' options are handled. If we wish to fullky support
+  // the obj file format, these should be added in.
+
+  //enum IMFChannel {
+  //  Red,
+  //  Green,
+  //  Blue,
+  //  Matte,
+  //  Luminance,
+  //  ZDepth,
+  //};
+
+  //struct Texture {
+  //  std::filesystem::path file;
+  //  bool blendU = true;
+  //  bool blendV = true;
+  //  float bumpMultiplier = 1.f;
+  //  float boostValue = 0.f; // Boosts sharpness.
+  //  bool colorCorrection = false;
+  //  bool clamp = false;
+  //  IMFChannel imfChannel = IMFChannel::Luminance;
+  //  float base = 0.f;
+  //  float gain = 1.f;
+  //  float textureMapOrigin[3] = { 0.f, 0.f, 0.f };
+  //  float textureSize[3] = { 1.f, 1.f, 1.f };
+  //  float turbulance[3] = { 0.f, 0.f, 0.f };
+  //  float textureRes;
+  //};
+
+  struct Texture {
+    std::filesystem::path file;
+  };
+
+  //enum IlluminationModel {
+  //  ColorOnAndAmbientOff = 0,
+  //  ColoronandAmbienton = 1,
+  //  HighlightOn = 2,
+  //  ReflectionOnAndRayTraceOn = 3,
+  //  TransparencyGlassOn = 4,
+  //  ReflectionRayTraceOn = 5,
+  //  ReflectionFresnelOnAndRayTraceOn = 6,
+  //  TransparencyRefractionOn = 7,
+  //  ReflectionFresnelOffAndRayTraceOn = 8,
+  //  TransparencyRefractionOn = 9,
+  //  ReflectionFresnelOnAndRayTraceOn = 10,
+  //  ReflectionOnAndRayTraceOff = 11,
+  //  TransparencyGlassOn = 12,
+  //  ReflectionRayTraceoff = 13,
+  //  CastsShadowsOntoInvisibleSurfaces = 14,
+  //};
+
+  struct Color {
+    float r;
+    float g;
+    float b;
+  };
+
+  // The .mtl file format supports lots and lots of options for materials. For now, let's only
+  // support a subset.
   struct Material {
-    float ambient[3];
-    float diffuse[3];
-    float specular[3];
+    std::string name;
 
-    float specularExponent;
-    float transparency; // 0 is opaque, 1 is fully transparent.
-    float indexOfRefraction;
+    Color ambientColor = { 0.f, 0.f, 0.f };
+    Color diffuseColor = { 0.f, 0.f, 0.f };
+    Color specularColor = { 0.f, 0.f, 0.f };
+    float specularExponent = 1.f;
 
-    int illuminationModel; // TODO: Change to enum.
+    // The sharpness of the local reflection map. Value between 0 and 1000.
+    //float sharpness = 60.f;
+    //float transmissionFilterColor[3] = { 1.f, 1.f, 1.f };
 
-    // TODO: Figure out how to best represent textures...
-    //    Shared pointers?
-    //    Index into something?
+    // Value between 0.001 and 10; 1.0 means that light does not bend when passing through.
+    //float indexOfRefraction = 1.f;
+    //bool antiAliasTextures = true;
+    //IlluminationModel illuminationModel;
+
+    Texture diffuseMap;
+    //Texture ambientMap;
+    //Texture specularMap;
+    //Texture specularExponentMap;
+    //Texture dissolveMap;
+    //Texture displacementMap;
+    //Texture decalMap;
+    //Texture bumpMap;
+    //Texture reflectionMap;
   };
 
   struct Vertex {
@@ -28,13 +100,14 @@ public:
   };
 
   struct Group {
-    // TODO: Material.
     std::string name;
     std::vector<uint32_t> indices;
+    int materialIndex; // -1 if no material specified.
   };
 
   std::vector<Vertex> m_vertices;
   std::vector<Group> m_groups;
+  std::vector<Material> m_materials;
 
   // TODO: Materials.
 
