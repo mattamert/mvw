@@ -844,6 +844,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         std::string materialName;
         parseSucceeded &= tokenizer.AcceptString(&materialName);
         if (parseSucceeded) {
+          // TODo: Should we be resolving the index now? Or just save the name and look it up later?
           int materialIndex = FindMaterialIndex(materialName);
           if (materialIndex < 0) {
             std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
