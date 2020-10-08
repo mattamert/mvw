@@ -8,6 +8,7 @@
 #include "d3d12/d3dx12.h"
 
 #include <assert.h>
+#include <filesystem>
 #include <iostream>
 #include <vector>
 
@@ -22,7 +23,8 @@ void Model::Init(ID3D12Device* device,
                  ResourceGarbageCollector& garbageCollector,
                  uint64_t nextSignalValue,
                  const std::vector<ObjData::Vertex>& vertices,
-                 const std::vector<uint32_t>& indices) {
+                 const std::vector<uint32_t>& indices,
+                 const ObjData::Material* material) {
   // Upload the vertex data.
   const size_t vertexBufferSize = sizeof(ObjData::Vertex) * vertices.size();
   CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -76,8 +78,12 @@ void Model::Init(ID3D12Device* device,
   cl->ResourceBarrier(2, barriers);
 
   Image img;
-  //HR(Image::LoadImageFile(L"C:\\Users\\Matt\\Documents\\Assets\\cube.png", &img));
-  HR(Image::LoadImageFile(L"C:\\Users\\Matt\\Documents\\Assets\\cube\\default.png", &img));
+  if (material && std::filesystem::exists(material->diffuseMap.file)) {
+    HR(Image::LoadImageFile(material->diffuseMap.file.wstring(), &img));
+  } else {
+    // TODO: Generate a checkerboard pattern for models that do not have a texture.
+    assert(false);
+  }
 
   const size_t imgBufferSize = img.data.size();
   CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -179,7 +185,8 @@ void Model::InitCube(ID3D12Device* device,
     indices.push_back(starting_index + 3);
   }
 
-  Init(device, cl, garbageCollector, nextSignalValue, vertices, indices);
+  // TODO: Generate generic material.
+  Init(device, cl, garbageCollector, nextSignalValue, vertices, indices, nullptr);
 }
 
 bool Model::InitFromObjFile(ID3D12Device* device,
@@ -197,7 +204,13 @@ bool Model::InitFromObjFile(ID3D12Device* device,
               << data.m_groups.size() << std::endl;
   }
 
-  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups[0].indices);
+  // TODO: When we support other groups than just the first one, pass in all of the materials.
+  auto materialIndex = data.m_groups[0].materialIndex;
+  const ObjData::Material* firstGroupMaterial =
+      (materialIndex >= 0) ? &data.m_materials[materialIndex] : nullptr;
+
+  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups[0].indices,
+       firstGroupMaterial);
   return true;
 }
 

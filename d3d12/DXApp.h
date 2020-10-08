@@ -47,6 +47,7 @@ class DXApp {
   ResourceGarbageCollector m_garbageCollector;
 
   // App data.
+  std::string m_objFilename;
   Object m_object;
   Animation m_objectRotationAnimation;
 
@@ -55,7 +56,7 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerObject;
 
  public:
-  void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue);
+  void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, std::string filename);
   bool IsInitialized() const;
 
   void HandleResizeIfNecessary();
@@ -71,7 +72,7 @@ class DXApp {
   void InitializePerWindowObjects(HWND hwnd);
   void InitializePerPassObjects();
   void InitializeFenceObjects();
-  void InitializeAppObjects();
+  void InitializeAppObjects(const std::string& objFilename);
 
   void FlushGPUWork();
   void WaitForNextFrame();

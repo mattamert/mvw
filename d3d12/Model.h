@@ -17,12 +17,14 @@ class Model {
   Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
 
+  // TODO: This is a lot of parameters. This function should be slimmed down somehow.
   void Init(ID3D12Device* device,
             ID3D12GraphicsCommandList* cl,
             ResourceGarbageCollector& garbageCollector,
             uint64_t nextSignalValue,
             const std::vector<ObjData::Vertex>& vertices,
-            const std::vector<uint32_t>& indices);
+            const std::vector<uint32_t>& indices,
+            const ObjData::Material* material);
 
 public:
   void InitCube(ID3D12Device* device,

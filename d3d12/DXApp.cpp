@@ -45,8 +45,11 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 }  // namespace
 
-void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
+void DXApp::Initialize(HWND hwnd,
+                       std::shared_ptr<MessageQueue> messageQueue,
+                       std::string filename) {
   m_messageQueue = std::move(messageQueue);
+  m_objFilename = std::move(filename);
 
   EnableDebugLayer();
 
@@ -54,7 +57,7 @@ void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue) {
   InitializePerWindowObjects(hwnd);
   InitializePerPassObjects();
   InitializeFenceObjects();
-  InitializeAppObjects();
+  InitializeAppObjects(m_objFilename);
 
   HR(m_cl->Close());
   ID3D12CommandList* cl[] = {m_cl.Get()};
@@ -106,11 +109,10 @@ void DXApp::InitializeFenceObjects() {
     HR(HRESULT_FROM_WIN32(GetLastError()));
 }
 
-void DXApp::InitializeAppObjects() {
+void DXApp::InitializeAppObjects(const std::string& objFilename) {
   Model model;
   model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
-                        //"C:\\Users\\Matt\\Documents\\Assets\\cube\\cube.obj");
-                        "C:\\Users\\Matt\\Documents\\Assets\\bunny\\bunny.obj");
+                        objFilename);
 
   m_object.model = std::move(model);
   m_object.position = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -121,7 +123,7 @@ void DXApp::InitializeAppObjects() {
 
   // Initialize the camera location.
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_camera.position_ = DirectX::XMFLOAT4(4, 4, -4, 1);
+  m_camera.position_ = DirectX::XMFLOAT4(0.5, 0.5, -0.5, 1);
 
   // Initialize the constant buffers.
   m_constantBufferPerFrame =

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <thread>
 
 #include "d3d12/DXApp.h"
@@ -14,7 +15,7 @@ class WindowProxy {
  public:
   WindowProxy() = default;
 
-  void Initialize();
+  void Initialize(std::string filename);
   void PushMessage(MSG msg);
   void WaitForRenderThreadToFinish();
 };
