@@ -736,7 +736,11 @@ bool ObjFileParser::Init(const std::string& filePath) {
     ObjDeclarationType type;
     bool parseSucceeded = tokenizer.AcceptObjDeclaration(&type);
     if (!parseSucceeded) {
-      std::cerr << "Unrecognized declaration" << std::endl;
+      std::string unrecognizedDeclaration;
+      (void)tokenizer.AcceptString(&unrecognizedDeclaration);
+      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration "
+                << unrecognizedDeclaration << std::endl;
+      tokenizer.ForceAcceptNewLine();
       continue;
     }
 
@@ -844,7 +848,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
         std::string materialName;
         parseSucceeded &= tokenizer.AcceptString(&materialName);
         if (parseSucceeded) {
-          // TODo: Should we be resolving the index now? Or just save the name and look it up later?
+          // TODO: Should we be resolving the index now? Or just save the name and look it up later?
           int materialIndex = FindMaterialIndex(materialName);
           if (materialIndex < 0) {
             std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
