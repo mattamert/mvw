@@ -185,6 +185,11 @@ void Model::InitCube(ID3D12Device* device,
     indices.push_back(starting_index + 3);
   }
 
+  for (size_t i = 0; i < 3; ++i) {
+    m_bounds.max[i] = 1.0;
+    m_bounds.min[i] = -1.0;
+  }
+
   // TODO: Generate generic material.
   Init(device, cl, garbageCollector, nextSignalValue, vertices, indices, nullptr);
 }
@@ -204,6 +209,8 @@ bool Model::InitFromObjFile(ID3D12Device* device,
               << data.m_groups.size() << std::endl;
   }
 
+  m_bounds = data.m_bounds;
+
   // TODO: When we support other groups than just the first one, pass in all of the materials.
   auto materialIndex = data.m_groups[0].materialIndex;
   const ObjData::Material* firstGroupMaterial =
@@ -211,6 +218,7 @@ bool Model::InitFromObjFile(ID3D12Device* device,
 
   Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups[0].indices,
        firstGroupMaterial);
+
   return true;
 }
 
@@ -224,6 +232,10 @@ D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView() {
 
 size_t Model::GetNumIndices() {
   return m_numIndices;
+}
+
+const ObjData::AxisAlignedBounds& Model::GetBounds() const {
+  return m_bounds;
 }
 
 ID3D12DescriptorHeap* Model::GetSRVDescriptorHeap() {

@@ -121,9 +121,14 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
 
   m_objectRotationAnimation = Animation::CreateAnimation(5000, /*repeat*/ true);
 
-  // Initialize the camera location.
+
+  // Calculate a reasonable place for the camera based on the model's bounding box.
+  const ObjData::AxisAlignedBounds& bounds = m_object.model.GetBounds();
+  float width = std::abs(bounds.max[0] - bounds.min[0]);
+  float height = std::abs(bounds.max[1] - bounds.min[1]);
+  float length = std::abs(bounds.max[2] - bounds.min[2]);
+  m_camera.position_ = DirectX::XMFLOAT4(width * 3, height / 2, length * 3, 1.f);
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_camera.position_ = DirectX::XMFLOAT4(0.5, 0.5, -0.5, 1);
 
   // Initialize the constant buffers.
   m_constantBufferPerFrame =

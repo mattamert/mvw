@@ -105,9 +105,15 @@ public:
     int materialIndex; // -1 if no material specified.
   };
 
+  struct AxisAlignedBounds {
+    double max[3];
+    double min[3];
+  };
+
   std::vector<Vertex> m_vertices;
   std::vector<Group> m_groups;
   std::vector<Material> m_materials;
+  AxisAlignedBounds m_bounds;
 
   bool ParseObjFile(const std::string& fileName);
 };

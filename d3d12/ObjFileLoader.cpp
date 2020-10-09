@@ -607,11 +607,15 @@ class ObjFileParser {
   std::vector<Normal> m_normals;
   std::unordered_map<Indices, uint32_t, Indices::Hash> m_mapIndicesToVertexIndex;
 
+  ObjData::AxisAlignedBounds m_bounds;
+  bool m_areBoundsInitialized = false;
+
   bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
   int FindMaterialIndex(const std::string& materialName);
 
   void AddGroup(std::string&& groupName);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
+  void CalculateAxisAlignedBounds();
 
  public:
   bool Init(const std::string& filePath);
@@ -619,6 +623,7 @@ class ObjFileParser {
   std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
   std::vector<ObjData::Group>& GetGroups() { return m_groups; }
   std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
+  ObjData::AxisAlignedBounds& GetBounds() { return m_bounds; }
 };
 
 bool ObjFileParser::LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename) {
@@ -885,7 +890,33 @@ bool ObjFileParser::Init(const std::string& filePath) {
     }
   }
 
+  CalculateAxisAlignedBounds();
+
   return true;
+}
+
+void ObjFileParser::CalculateAxisAlignedBounds() {
+  if (m_positions.empty())
+    return;
+
+  m_bounds.max[0] = m_positions[0].x;
+  m_bounds.max[1] = m_positions[0].y;
+  m_bounds.max[2] = m_positions[0].z;
+
+  m_bounds.min[0] = m_positions[0].x;
+  m_bounds.min[1] = m_positions[0].y;
+  m_bounds.min[2] = m_positions[0].z;
+
+  for (size_t i = 1; i < m_positions.size(); ++i) {
+    const Position& pos = m_positions[i];
+    m_bounds.max[0] = std::max(m_bounds.max[0], pos.x);
+    m_bounds.max[1] = std::max(m_bounds.max[1], pos.y);
+    m_bounds.max[2] = std::max(m_bounds.max[2], pos.z);
+
+    m_bounds.min[0] = std::min(m_bounds.min[0], pos.x);
+    m_bounds.min[1] = std::min(m_bounds.min[1], pos.y);
+    m_bounds.min[2] = std::min(m_bounds.min[2], pos.z);
+  }
 }
 
 bool ObjData::ParseObjFile(const std::string& fileName) {
@@ -896,6 +927,7 @@ bool ObjData::ParseObjFile(const std::string& fileName) {
   m_vertices = std::move(parser.GetVertices());
   m_groups = std::move(parser.GetGroups());
   m_materials = std::move(parser.GetMaterials());
+  m_bounds = std::move(parser.GetBounds());
   return true;
 }
 

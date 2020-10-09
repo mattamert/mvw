@@ -17,6 +17,8 @@ class Model {
   Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
 
+  ObjData::AxisAlignedBounds m_bounds;
+
   // TODO: This is a lot of parameters. This function should be slimmed down somehow.
   void Init(ID3D12Device* device,
             ID3D12GraphicsCommandList* cl,
@@ -41,6 +43,7 @@ public:
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
   D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView();
   size_t GetNumIndices();
+  const ObjData::AxisAlignedBounds& GetBounds() const;
 
   ID3D12DescriptorHeap* GetSRVDescriptorHeap();
 };
