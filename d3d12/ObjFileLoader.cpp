@@ -850,6 +850,10 @@ bool ObjFileParser::Init(const std::string& filePath) {
             std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
                       << materialName << "." << std::endl;
           }
+
+          if (!m_currentGroup)
+            AddGroup("");
+
           m_currentGroup->materialIndex = materialIndex;
         }
       } break;
