@@ -48,7 +48,7 @@ HRESULT Image::LoadImageFile(const std::wstring& file, Image* img) {
   UINT height;
   RETURN_IF_FAILED(converter->GetSize(&width, &height));
 
-  const UINT bytesPerPixel = 4;  // 24bpp / 8.
+  const UINT bytesPerPixel = 4;  // 32bpp / 8.
   std::vector<unsigned char> data(width * height * bytesPerPixel);
   RETURN_IF_FAILED(converter->CopyPixels(nullptr, width * bytesPerPixel, data.size(), data.data()));
 
