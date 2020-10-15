@@ -23,8 +23,8 @@ void Model::Init(ID3D12Device* device,
                  ResourceGarbageCollector& garbageCollector,
                  uint64_t nextSignalValue,
                  const std::vector<ObjData::Vertex>& vertices,
-                 const std::vector<uint32_t>& indices,
-                 const ObjData::Material* material) {
+                 const std::vector<ObjData::Group>& objGroups,
+                 const std::vector<ObjData::Material>& materials) {
   // Upload the vertex data.
   const size_t vertexBufferSize = sizeof(ObjData::Vertex) * vertices.size();
   CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -47,87 +47,112 @@ void Model::Init(ID3D12Device* device,
   m_vertexBufferView.SizeInBytes = vertexBufferSize;
   m_vertexBufferView.StrideInBytes = sizeof(ColorPass::VertexData);
 
-  // Upload the index data.
-  const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
-  CD3DX12_HEAP_PROPERTIES indexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-  CD3DX12_RESOURCE_DESC indexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-  HR(device->CreateCommittedResource(&indexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &indexBufferResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-                                     nullptr, IID_PPV_ARGS(&m_indexBuffer)));
+  std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
+  barriers.reserve(1 + 2 * objGroups.size());
+  barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
+      m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-  ComPtr<ID3D12Resource> intermediateIndexBuffer = ResourceHelper::AllocateIntermediateBuffer(
-      device, m_indexBuffer.Get(), garbageCollector, nextSignalValue);
-
-  D3D12_SUBRESOURCE_DATA indexData;
-  indexData.pData = indices.data();
-  indexData.RowPitch = indexBufferSize;
-  indexData.SlicePitch = indexBufferSize;
-  UpdateSubresources(cl, m_indexBuffer.Get(), intermediateIndexBuffer.Get(), 0, 0, 1, &indexData);
-
-  m_numIndices = indices.size();
-  m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
-  m_indexBufferView.SizeInBytes = indexBufferSize;
-  m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-
-  CD3DX12_RESOURCE_BARRIER barriers[2] = {
-      CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-                                           D3D12_RESOURCE_STATE_GENERIC_READ),
-      CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-                                           D3D12_RESOURCE_STATE_GENERIC_READ),
-  };
-  cl->ResourceBarrier(2, barriers);
-
-  Image img;
-  if (material && std::filesystem::exists(material->diffuseMap.file)) {
-    HR(Image::LoadImageFile(material->diffuseMap.file.wstring(), &img));
-  } else {
-    // TODO: Generate a checkerboard pattern for models that do not have a texture.
-    assert(false);
-  }
-
-  const size_t imgBufferSize = img.data.size();
-  CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-  CD3DX12_RESOURCE_DESC textureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-      img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
-  textureResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-  HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                     IID_PPV_ARGS(&m_texture)));
-
-  ComPtr<ID3D12Resource> intermediateTextureBuffer = ResourceHelper::AllocateIntermediateBuffer(
-      device, m_texture.Get(), garbageCollector, nextSignalValue);
-
-  D3D12_SUBRESOURCE_DATA textureData;
-  textureData.pData = img.data.data();
-  textureData.RowPitch = img.bytesPerPixel * img.width;
-  textureData.SlicePitch = img.bytesPerPixel * img.width * img.height;
-  UpdateSubresources(cl, m_texture.Get(), intermediateTextureBuffer.Get(), 0, 0, 1, &textureData);
-
-  CD3DX12_RESOURCE_BARRIER textureBarrier[1] = {
-      CD3DX12_RESOURCE_BARRIER::Transition(m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-                                           D3D12_RESOURCE_STATE_UNORDERED_ACCESS),
-  };
-  cl->ResourceBarrier(1, textureBarrier);
-
+  // TODO: We may not need all of these descriptors, but just for now, let's just over-allocate and
+  // worry about cleaning it up later.
   D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc;
   srvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
   srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  srvDescriptorHeapDesc.NumDescriptors = 1;
+  srvDescriptorHeapDesc.NumDescriptors = objGroups.size();
   srvDescriptorHeapDesc.NodeMask = 0;
   HR(device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
-
-  D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-  srvDesc.Format = img.format;
-  srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-  srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-  srvDesc.Texture2D.MipLevels = 1;
-  srvDesc.Texture2D.MostDetailedMip = 0;
-  srvDesc.Texture2D.PlaneSlice = 0;
-  srvDesc.Texture2D.ResourceMinLODClamp = 0;
+  size_t incrementSize =
+      device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  m_srvDescriptorIncrement = incrementSize;
 
   CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(
       m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-  device->CreateShaderResourceView(m_texture.Get(), &srvDesc, cpuHandle);
+  CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(
+      m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+  // Upload the ObjFile groups.
+  m_groups.resize(objGroups.size());
+  for (size_t i = 0; i < objGroups.size(); ++i) {
+    const ObjData::Group& objGroup = objGroups[i];
+    Model::Group& modelGroup = m_groups[i];
+
+    // Upload the index data.
+    const size_t indexBufferSize = objGroup.indices.size() * sizeof(uint32_t);
+    CD3DX12_HEAP_PROPERTIES indexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC indexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+    HR(device->CreateCommittedResource(&indexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
+      &indexBufferResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
+      nullptr, IID_PPV_ARGS(&modelGroup.m_indexBuffer)));
+
+    ComPtr<ID3D12Resource> intermediateIndexBuffer = ResourceHelper::AllocateIntermediateBuffer(
+      device, modelGroup.m_indexBuffer.Get(), garbageCollector, nextSignalValue);
+
+    D3D12_SUBRESOURCE_DATA indexData;
+    indexData.pData = objGroup.indices.data();
+    indexData.RowPitch = indexBufferSize;
+    indexData.SlicePitch = indexBufferSize;
+    UpdateSubresources(cl, modelGroup.m_indexBuffer.Get(), intermediateIndexBuffer.Get(), 0, 0, 1, &indexData);
+
+    modelGroup.m_numIndices = objGroup.indices.size();
+    modelGroup.m_indexBufferView.BufferLocation = modelGroup.m_indexBuffer->GetGPUVirtualAddress();
+    modelGroup.m_indexBufferView.SizeInBytes = indexBufferSize;
+    modelGroup.m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+
+    barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(modelGroup.m_indexBuffer.Get(),
+                                                               D3D12_RESOURCE_STATE_COPY_DEST,
+                                                               D3D12_RESOURCE_STATE_GENERIC_READ));
+
+    // TODO: We should check if we've already uploaded the file, and then just use that one.
+    // This will get much more relevant when we factor in other of mtl's maps.
+    modelGroup.m_texture = nullptr;
+    if (objGroup.materialIndex >= 0) {
+      const ObjData::Material& material = materials[objGroup.materialIndex];
+      if (std::filesystem::exists(material.diffuseMap.file)) {
+        Image img;
+        HR(Image::LoadImageFile(material.diffuseMap.file.wstring(), &img));
+
+        // Upload the texture.
+        const size_t imgBufferSize = img.data.size();
+        CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+        CD3DX12_RESOURCE_DESC textureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
+        textureResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE,
+                                           &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
+                                           nullptr, IID_PPV_ARGS(&modelGroup.m_texture)));
+
+        ComPtr<ID3D12Resource> intermediateTextureBuffer =
+            ResourceHelper::AllocateIntermediateBuffer(device, modelGroup.m_texture.Get(),
+                                                       garbageCollector, nextSignalValue);
+
+        D3D12_SUBRESOURCE_DATA textureData;
+        textureData.pData = img.data.data();
+        textureData.RowPitch = img.bytesPerPixel * img.width;
+        textureData.SlicePitch = img.bytesPerPixel * img.width * img.height;
+        UpdateSubresources(cl, modelGroup.m_texture.Get(), intermediateTextureBuffer.Get(), 0, 0, 1,
+                           &textureData);
+
+        barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
+            modelGroup.m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+        srvDesc.Format = img.format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MipLevels = 1;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.PlaneSlice = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0;
+        device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc, cpuHandle);
+        modelGroup.m_descriptorHandle = gpuHandle;
+
+        cpuHandle.Offset(incrementSize);
+        gpuHandle.Offset(incrementSize);
+      }
+    }
+  }
+
+  cl->ResourceBarrier(barriers.size(), barriers.data());
 }
 
 void Model::InitCube(ID3D12Device* device,
@@ -190,8 +215,17 @@ void Model::InitCube(ID3D12Device* device,
     m_bounds.min[i] = -1.0;
   }
 
+  std::vector<ObjData::Group> group(1);
+  group[0].indices = std::move(indices);
+  group[0].materialIndex = -1;
+  group[0].name = "";
+
+  // TODO: Pretty sure this will crash without a material. Should probably fix (and clean everything
+  // up...).
+  std::vector<ObjData::Material> materials;
+
   // TODO: Generate generic material.
-  Init(device, cl, garbageCollector, nextSignalValue, vertices, indices, nullptr);
+  Init(device, cl, garbageCollector, nextSignalValue, vertices, group, materials);
 }
 
 bool Model::InitFromObjFile(ID3D12Device* device,
@@ -210,14 +244,8 @@ bool Model::InitFromObjFile(ID3D12Device* device,
   }
 
   m_bounds = data.m_bounds;
-
-  // TODO: When we support other groups than just the first one, pass in all of the materials.
-  auto materialIndex = data.m_groups[0].materialIndex;
-  const ObjData::Material* firstGroupMaterial =
-      (materialIndex >= 0) ? &data.m_materials[materialIndex] : nullptr;
-
-  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups[0].indices,
-       firstGroupMaterial);
+  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups,
+       data.m_materials);
 
   return true;
 }
@@ -226,13 +254,6 @@ D3D12_VERTEX_BUFFER_VIEW& Model::GetVertexBufferView() {
   return m_vertexBufferView;
 }
 
-D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView() {
-  return m_indexBufferView;
-}
-
-size_t Model::GetNumIndices() {
-  return m_numIndices;
-}
 
 const ObjData::AxisAlignedBounds& Model::GetBounds() const {
   return m_bounds;
@@ -240,4 +261,23 @@ const ObjData::AxisAlignedBounds& Model::GetBounds() const {
 
 ID3D12DescriptorHeap* Model::GetSRVDescriptorHeap() {
   return m_srvDescriptorHeap.Get();
+}
+
+size_t Model::GetNumberOfGroups() {
+  return m_groups.size();
+}
+
+D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView(size_t groupIndex) {
+  return m_groups[groupIndex].m_indexBufferView;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE Model::GetTextureDescriptorHandle(size_t groupIndex) {
+  //return m_groups[groupIndex].m_descriptorHandle;
+  return CD3DX12_GPU_DESCRIPTOR_HANDLE(
+      this->m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), groupIndex,
+      m_srvDescriptorIncrement);
+}
+
+size_t Model::GetNumIndices(size_t groupIndex) {
+  return m_groups[groupIndex].m_numIndices;
 }

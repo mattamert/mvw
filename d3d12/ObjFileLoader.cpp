@@ -675,12 +675,22 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
       const TexCoord& texCoord = m_texCoords[indices.texCoordIndex - 1];
       const Normal& normal = m_normals[indices.normalIndex - 1];
 
+      float u = texCoord.u - (int)texCoord.u;
+      if (u < 0)
+        u += 1.f;
+
+      float v = texCoord.v - (int)texCoord.v;
+      if (v < 0)
+        v += 1.f;
+
+      v = 1.f - v;
+
       ObjData::Vertex vertex;
       vertex.pos[0] = pos.x;
       vertex.pos[1] = pos.y;
       vertex.pos[2] = pos.z;
-      vertex.texCoord[0] = texCoord.u;
-      vertex.texCoord[1] = 1.0 - texCoord.v; // TODO: Is the flipping correct?
+      vertex.texCoord[0] = u;
+      vertex.texCoord[1] = v;
       vertex.normal[0] = normal.x;
       vertex.normal[1] = normal.y;
       vertex.normal[2] = normal.z;
@@ -782,6 +792,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
       } break;
 
       case ObjDeclarationType::Face: {
+        // TODO: We should probably specialize this function for 3/4 vertex faces in order to avoid
+        // heap allocations when parsing faces.
         std::vector<Indices> indices;
         for (;;) {
           long long posIndex = 0;

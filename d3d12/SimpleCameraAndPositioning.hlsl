@@ -25,6 +25,11 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   return result;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET {
-  return float4(objectTexture.Sample(pointClamp, input.tex, 1.0f));
+float4 PSMain(PSInput input) : SV_TARGET{
+  float4 texValue = objectTexture.Sample(pointClamp, input.tex, 1.0f);
+  if (texValue.w == 0.f) {
+    discard;
+  }
+
+  return texValue;
 }

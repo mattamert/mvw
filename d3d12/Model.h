@@ -7,15 +7,23 @@
 #include <wrl/client.h>  // For ComPtr
 
 class Model {
+  struct Group {
+    // TODO: Naming. We probably should have "m_" prefix.
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
+    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    size_t m_numIndices;
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_descriptorHandle;
+    // TODO: Add material stuff.
+  };
+
  private:
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-  D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-  size_t m_numIndices;
+  std::vector<Group> m_groups;
 
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
+  size_t m_srvDescriptorIncrement;
 
   ObjData::AxisAlignedBounds m_bounds;
 
@@ -25,10 +33,10 @@ class Model {
             ResourceGarbageCollector& garbageCollector,
             uint64_t nextSignalValue,
             const std::vector<ObjData::Vertex>& vertices,
-            const std::vector<uint32_t>& indices,
-            const ObjData::Material* material);
+            const std::vector<ObjData::Group>& objGroups,
+            const std::vector<ObjData::Material>& materials);
 
-public:
+ public:
   void InitCube(ID3D12Device* device,
                 ID3D12GraphicsCommandList* cl,
                 ResourceGarbageCollector& garbageCollector,
@@ -41,9 +49,12 @@ public:
                        const std::string& fileName);
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
-  D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView();
-  size_t GetNumIndices();
   const ObjData::AxisAlignedBounds& GetBounds() const;
-
   ID3D12DescriptorHeap* GetSRVDescriptorHeap();
+
+  // TODO: This is so sloppy, should be cleaned up. idk what to, though.
+  size_t GetNumberOfGroups();
+  D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView(size_t groupIndex);
+  D3D12_GPU_DESCRIPTOR_HANDLE GetTextureDescriptorHandle(size_t groupIndex);
+  size_t GetNumIndices(size_t groupIndex);
 };

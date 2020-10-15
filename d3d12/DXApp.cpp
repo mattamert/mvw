@@ -114,20 +114,23 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
   model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
                         objFilename);
 
-  m_object.model = std::move(model);
-  m_object.position = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_object.rotationY = 0;
-  m_object.scale = 1;
-
-  m_objectRotationAnimation = Animation::CreateAnimation(5000, /*repeat*/ true);
-
-
-  // Calculate a reasonable place for the camera based on the model's bounding box.
-  const ObjData::AxisAlignedBounds& bounds = m_object.model.GetBounds();
+  const ObjData::AxisAlignedBounds& bounds = model.GetBounds();
   float width = std::abs(bounds.max[0] - bounds.min[0]);
   float height = std::abs(bounds.max[1] - bounds.min[1]);
   float length = std::abs(bounds.max[2] - bounds.min[2]);
-  m_camera.position_ = DirectX::XMFLOAT4(width * 3, height / 2, length * 3, 1.f);
+
+  // TODO: This syntax is weird, but I don't want to have to deal with windows headers right now.
+  // Ideally, we'd just define NOMINMAX as a compiler flag.
+  float maxDimension = (std::max)(width, (std::max)(height, length));
+
+  m_object.model = std::move(model);
+  m_object.position = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_object.rotationY = 0;
+  m_object.scale = 1 / maxDimension; // Scale such that the max dimension is of height 1.
+
+  m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
+
+  m_camera.position_ = DirectX::XMFLOAT4(1, 0.25, 1, 1.f);
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
 
   // Initialize the constant buffers.
@@ -181,14 +184,8 @@ void DXApp::DrawScene() {
 
   ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &modelTransform4x4,
                                sizeof(modelTransform4x4));
+
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
-
-  ID3D12DescriptorHeap* heaps[] = {m_object.model.GetSRVDescriptorHeap()};
-  m_cl->SetDescriptorHeaps(1, heaps);
-  m_cl->SetGraphicsRootDescriptorTable(
-      2, m_object.model.GetSRVDescriptorHeap()->GetGPUDescriptorHandleForHeapStart());
-
-  // Resume scheduled programming.
 
   unsigned int width = m_window.GetWidth();
   unsigned int height = m_window.GetHeight();
@@ -208,10 +205,17 @@ void DXApp::DrawScene() {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
-  m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView());
+  ID3D12DescriptorHeap* heaps[] = {m_object.model.GetSRVDescriptorHeap()};
+  m_cl->SetDescriptorHeaps(1, heaps);
 
-  m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(), 1, 0, 0, 0);
+  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+
+  size_t numberOfGroups = m_object.model.GetNumberOfGroups();
+  for (size_t i = 0; i < numberOfGroups; ++i) {
+    m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
+    m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
+    m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
+  }
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
