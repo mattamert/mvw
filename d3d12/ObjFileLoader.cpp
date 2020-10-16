@@ -675,22 +675,12 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
       const TexCoord& texCoord = m_texCoords[indices.texCoordIndex - 1];
       const Normal& normal = m_normals[indices.normalIndex - 1];
 
-      float u = texCoord.u - (int)texCoord.u;
-      if (u < 0)
-        u += 1.f;
-
-      float v = texCoord.v - (int)texCoord.v;
-      if (v < 0)
-        v += 1.f;
-
-      v = 1.f - v;
-
       ObjData::Vertex vertex;
       vertex.pos[0] = pos.x;
       vertex.pos[1] = pos.y;
       vertex.pos[2] = pos.z;
-      vertex.texCoord[0] = u;
-      vertex.texCoord[1] = v;
+      vertex.texCoord[0] = texCoord.u;
+      vertex.texCoord[1] = 1.0 - texCoord.v;
       vertex.normal[0] = normal.x;
       vertex.normal[1] = normal.y;
       vertex.normal[2] = normal.z;
