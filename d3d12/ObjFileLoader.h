@@ -106,8 +106,8 @@ public:
   };
 
   struct AxisAlignedBounds {
-    double max[3];
-    double min[3];
+    float max[3];
+    float min[3];
   };
 
   std::vector<Vertex> m_vertices;

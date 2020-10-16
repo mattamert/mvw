@@ -90,21 +90,21 @@ enum class ObjDeclarationType {
 
 struct Position {
   // 4d coordinates are converted to 3d coords.
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 };
 
 struct TexCoord {
   // 3d textures are not supported right now.
-  double u;
-  double v;
+  float u;
+  float v;
 };
 
 struct Normal {
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 };
 
 // These indices are 1-based, as that is what is given by the obj file.
@@ -149,7 +149,7 @@ class Tokenizer {
   bool AcceptObjDeclaration(ObjDeclarationType* value);
   bool AcceptMtlDeclaration(MtlDeclarationType* value);
   bool AcceptInteger(long long* value);
-  bool AcceptDouble(double* value);
+  bool AcceptFloat(float* value);
   bool AcceptIndexSeparator();
   bool AcceptString(std::string* value);
   bool AcceptNewLine();
@@ -305,12 +305,12 @@ bool Tokenizer::AcceptInteger(long long* value) {
   return false;
 }
 
-bool Tokenizer::AcceptDouble(double* value) {
+bool Tokenizer::AcceptFloat(float* value) {
   ConsumeWhitespace();
 
   const char* startPtr = &m_data[m_index];
   char* endPtr;
-  double parsedValue = strtod(startPtr, &endPtr);
+  float parsedValue = strtof(startPtr, &endPtr);
 
   size_t lengthConsumed = endPtr - startPtr;
   if (lengthConsumed > 0) {
@@ -391,8 +391,8 @@ class MtlFileParser {
 
 /*static*/
 bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjData::Color* color) {
-  double parsedColor[3];
-  if (!tokenizer.AcceptDouble(&parsedColor[0])) {
+  float parsedColor[3];
+  if (!tokenizer.AcceptFloat(&parsedColor[0])) {
     std::string str;
     if (tokenizer.AcceptString(&str)) {
       if (str == "specular")
@@ -406,11 +406,11 @@ bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjData::Color* color) {
     return false;
   }
 
-  if (!tokenizer.AcceptDouble(&parsedColor[1])) {
+  if (!tokenizer.AcceptFloat(&parsedColor[1])) {
     color[1] = color[0];
   }
 
-  if (!tokenizer.AcceptDouble(&parsedColor[2])) {
+  if (!tokenizer.AcceptFloat(&parsedColor[2])) {
     color[2] = color[1];
   }
 
@@ -487,9 +487,9 @@ bool MtlFileParser::Parse(const std::string& filePath) {
         parseSucceeded &= ParseColor(tokenizer, &m_currentMaterial->specularColor);
         break;
       case MtlDeclarationType::SpecularExponent: {
-        double parsedSpecularExponent = 0.0;
-        parseSucceeded &= tokenizer.AcceptDouble(&parsedSpecularExponent);
-        m_currentMaterial->specularExponent = (float)parsedSpecularExponent;
+        float parsedSpecularExponent = 0.0;
+        parseSucceeded &= tokenizer.AcceptFloat(&parsedSpecularExponent);
+        m_currentMaterial->specularExponent = parsedSpecularExponent;
       } break;
       case MtlDeclarationType::DiffuseMap:
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &m_currentMaterial->diffuseMap);
@@ -497,13 +497,13 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 
       case MtlDeclarationType::Dissolve: {
         EmitNotSupportedMessage(currentLineNumber, "dissolve");
-        double parsedValue = 0.0;
-        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+        float parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptFloat(&parsedValue);
       } break;
       case MtlDeclarationType::Transparency: {
         EmitNotSupportedMessage(currentLineNumber, "transparancy");
-        double parsedValue = 0.0;
-        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+        float parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptFloat(&parsedValue);
       } break;
       case MtlDeclarationType::TransmissionFilter: {
         EmitNotSupportedMessage(currentLineNumber, "transmission filter");
@@ -513,13 +513,13 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 
       case MtlDeclarationType::Sharpness: {
         EmitNotSupportedMessage(currentLineNumber, "sharpness");
-        double parsedValue = 0.0;
-        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+        float parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptFloat(&parsedValue);
       } break;
       case MtlDeclarationType::IndexOfRefraction: {
         EmitNotSupportedMessage(currentLineNumber, "index of refraction");
-        double parsedValue = 0.0;
-        parseSucceeded &= tokenizer.AcceptDouble(&parsedValue);
+        float parsedValue = 0.0;
+        parseSucceeded &= tokenizer.AcceptFloat(&parsedValue);
       } break;
 
       case MtlDeclarationType::IlluminationModel: {
@@ -752,21 +752,21 @@ bool ObjFileParser::Init(const std::string& filePath) {
     switch (type) {
       case ObjDeclarationType::Position: {
         Position pos = {};
-        parseSucceeded &= tokenizer.AcceptDouble(&pos.x);
-        parseSucceeded &= tokenizer.AcceptDouble(&pos.y);
-        parseSucceeded &= tokenizer.AcceptDouble(&pos.z);
+        parseSucceeded &= tokenizer.AcceptFloat(&pos.x);
+        parseSucceeded &= tokenizer.AcceptFloat(&pos.y);
+        parseSucceeded &= tokenizer.AcceptFloat(&pos.z);
         // Always append a position even if parsing failed, so that future indices do not get off.
         m_positions.push_back(pos);
       } break;
 
       case ObjDeclarationType::TextureCoord: {
         TexCoord coord = {};
-        parseSucceeded &= tokenizer.AcceptDouble(&coord.u);
-        if (!tokenizer.AcceptDouble(&coord.v))  // Second value is optional.
+        parseSucceeded &= tokenizer.AcceptFloat(&coord.u);
+        if (!tokenizer.AcceptFloat(&coord.v))  // Second value is optional.
           coord.v = 0.;
 
-        double dummy;
-        (void)tokenizer.AcceptDouble(&dummy);  // Third value is allowed, but unused.
+        float dummy;
+        (void)tokenizer.AcceptFloat(&dummy);  // Third value is allowed, but unused.
 
         // Always append a texcoord even if parsing failed, so that future indices do not get off.
         m_texCoords.push_back(coord);
@@ -774,9 +774,9 @@ bool ObjFileParser::Init(const std::string& filePath) {
 
       case ObjDeclarationType::Normal: {
         Normal normal = {};
-        parseSucceeded &= tokenizer.AcceptDouble(&normal.x);
-        parseSucceeded &= tokenizer.AcceptDouble(&normal.y);
-        parseSucceeded &= tokenizer.AcceptDouble(&normal.z);
+        parseSucceeded &= tokenizer.AcceptFloat(&normal.x);
+        parseSucceeded &= tokenizer.AcceptFloat(&normal.y);
+        parseSucceeded &= tokenizer.AcceptFloat(&normal.z);
         // Always append a normal even if parsing failed, so that future indices do not get off.
         m_normals.push_back(normal);
       } break;
