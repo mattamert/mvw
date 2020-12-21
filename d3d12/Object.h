@@ -15,5 +15,5 @@ public:
   float rotationY; 
   float scale;
 
-  DirectX::XMMATRIX Object::GenerateModelTransform();
+  DirectX::XMMATRIX GenerateModelTransform();
 };
