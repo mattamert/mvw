@@ -6,7 +6,7 @@
 
 class ObjData {
 public:
-  // TODO: Currently, none of the texture maps' options are handled. If we wish to fullky support
+  // TODO: Currently, none of the texture maps' options are handled. If we wish to fully support
   // the obj file format, these should be added in.
 
   //enum IMFChannel {
