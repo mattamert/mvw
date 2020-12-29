@@ -597,11 +597,11 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 class ObjFileParser {
   // Overall result.
   std::vector<ObjData::Vertex> m_vertices;
-  std::vector<ObjData::Group> m_groups;
+  std::vector<ObjData::MaterialGroup> m_groups;
   std::vector<ObjData::Material> m_materials;
 
   // Only used for parsing.
-  ObjData::Group* m_currentGroup = nullptr;
+  ObjData::MaterialGroup* m_currentGroup = nullptr;
   std::vector<Position> m_positions;
   std::vector<TexCoord> m_texCoords;
   std::vector<Normal> m_normals;
@@ -613,7 +613,7 @@ class ObjFileParser {
   bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
   int FindMaterialIndex(const std::string& materialName);
 
-  void AddGroup(std::string&& groupName);
+  void AddMaterialGroup(int materialIndex = -1);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
   void CalculateAxisAlignedBounds();
 
@@ -621,7 +621,7 @@ class ObjFileParser {
   bool Init(const std::string& filePath);
 
   std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
-  std::vector<ObjData::Group>& GetGroups() { return m_groups; }
+  std::vector<ObjData::MaterialGroup>& GetGroups() { return m_groups; }
   std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
   ObjData::AxisAlignedBounds& GetBounds() { return m_bounds; }
 };
@@ -653,9 +653,9 @@ int ObjFileParser::FindMaterialIndex(const std::string& materialName) {
   return -1;
 }
 
-void ObjFileParser::AddGroup(std::string&& groupName) {
+void ObjFileParser::AddMaterialGroup(int materialIndex) {
   m_groups.emplace_back();
-  m_groups.back().name = std::move(groupName);
+  m_groups.back().materialIndex = materialIndex;
   m_currentGroup = &m_groups.back();
 }
 
@@ -694,8 +694,11 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
     }
   }
 
-  if (!m_currentGroup)
-    AddGroup("");
+  if (!m_currentGroup) {
+    std::cerr << "Warning: file contains vertices that do not have a material assigned to them."
+              << std::endl;
+    AddMaterialGroup();
+  }
 
   assert(vertexIndices.size() >= 3);
   assert(m_currentGroup != nullptr);
@@ -817,28 +820,13 @@ bool ObjFileParser::Init(const std::string& filePath) {
       } break;
 
       case ObjDeclarationType::Group: {
-        std::vector<std::string> groupNames;
+        // We don't actually care about the names of the groups, as they have no bearing on anything.
         std::string currentName;
-        while (tokenizer.AcceptString(&currentName)) {
-          groupNames.emplace_back(std::move(currentName));
-        }
-
-        // TOOD: Support multiple group names on one line.
-        if (groupNames.size() > 1) {
-          std::cerr << "WARNING: This only supports one group name per group definition."
-                    << std::endl;
-        }
-
-        if (groupNames.empty()) {
-          AddGroup("");
-        } else {
-          AddGroup(std::move(groupNames[0]));
-        }
+        while (tokenizer.AcceptString(&currentName));
       } break;
 
       case ObjDeclarationType::Smooth: {
-        // TODO: Should probably implement this...
-        // But for now, let's just igore it becaues ehh.
+        // No intention to implement non-smooth shading, so we ignore this.
         std::string dummy;
         (void)tokenizer.AcceptString(&dummy);
       } break;
@@ -855,22 +843,18 @@ bool ObjFileParser::Init(const std::string& filePath) {
         std::string materialName;
         parseSucceeded &= tokenizer.AcceptString(&materialName);
         if (parseSucceeded) {
-          // TODO: Should we be resolving the index now? Or just save the name and look it up later?
           int materialIndex = FindMaterialIndex(materialName);
           if (materialIndex < 0) {
             std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
                       << materialName << "." << std::endl;
           }
 
-          if (!m_currentGroup)
-            AddGroup("");
-
-          m_currentGroup->materialIndex = materialIndex;
+          AddMaterialGroup(materialIndex);
         }
       } break;
 
       case ObjDeclarationType::Object: {
-        std::cerr << "Warning: object declaration not really supported." << std::endl;
+        // Similar to a group declaration, we don't care about objects or their names; we just care about their vertices.
         std::string objectName;
         (void)tokenizer.AcceptString(&objectName);
       } break;

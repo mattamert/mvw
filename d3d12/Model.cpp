@@ -23,7 +23,7 @@ void Model::Init(ID3D12Device* device,
                  ResourceGarbageCollector& garbageCollector,
                  uint64_t nextSignalValue,
                  const std::vector<ObjData::Vertex>& vertices,
-                 const std::vector<ObjData::Group>& objGroups,
+                 const std::vector<ObjData::MaterialGroup>& objGroups,
                  const std::vector<ObjData::Material>& materials) {
   // Upload the vertex data.
   const size_t vertexBufferSize = sizeof(ObjData::Vertex) * vertices.size();
@@ -72,7 +72,7 @@ void Model::Init(ID3D12Device* device,
   // Upload the ObjFile groups.
   m_groups.resize(objGroups.size());
   for (size_t i = 0; i < objGroups.size(); ++i) {
-    const ObjData::Group& objGroup = objGroups[i];
+    const ObjData::MaterialGroup& objGroup = objGroups[i];
     Model::Group& modelGroup = m_groups[i];
 
     // Upload the index data.
@@ -215,10 +215,9 @@ void Model::InitCube(ID3D12Device* device,
     m_bounds.min[i] = -1.0;
   }
 
-  std::vector<ObjData::Group> group(1);
+  std::vector<ObjData::MaterialGroup> group(1);
   group[0].indices = std::move(indices);
   group[0].materialIndex = -1;
-  group[0].name = "";
 
   // TODO: Pretty sure this will crash without a material. Should probably fix (and clean everything
   // up...).

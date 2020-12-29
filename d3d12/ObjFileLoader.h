@@ -99,8 +99,8 @@ public:
     float normal[3];
   };
 
-  struct Group {
-    std::string name;
+  // Represents a group of vertices that all have the same material. Isn't equivalent to an obj file "group".
+  struct MaterialGroup {
     std::vector<uint32_t> indices;
     int materialIndex; // -1 if no material specified.
   };
@@ -111,7 +111,7 @@ public:
   };
 
   std::vector<Vertex> m_vertices;
-  std::vector<Group> m_groups;
+  std::vector<MaterialGroup> m_groups;
   std::vector<Material> m_materials;
   AxisAlignedBounds m_bounds;
 
