@@ -238,11 +238,6 @@ bool Model::InitFromObjFile(ID3D12Device* device,
     return false;
   }
 
-  if (data.m_groups.size() > 1) {
-    std::cout << "Warning: Only using the first group from the obj file, when there were actually "
-              << data.m_groups.size() << std::endl;
-  }
-
   m_bounds = data.m_bounds;
   Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups,
        data.m_materials);
