@@ -1,6 +1,8 @@
 #include <Windows.h>
 
 #include <cassert>
+#include <iostream>
+#include <filesystem>
 #include <string>
 #include <thread>
 
@@ -27,10 +29,16 @@ void RunMessageLoop() {
 int main(int argc, char** argv) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
-  std::string objFilename =
-      (argc > 1) ? std::string(argv[1])
-                 : "C:\\Users\\Matt\\Documents\\Assets\\StanfordBunnyTextured\\20180310_KickAir8P_"
-                   "UVUnwrapped_Stanford_Bunny.obj";
+  if (argc != 2) {
+    std::cerr << "Usage: d3d12_renderer.exe <obj file>" << std::endl;
+    return 1;
+  }
+
+  std::string objFilename = std::string(argv[1]);
+  if (!std::filesystem::exists(objFilename)) {
+    std::cerr << "File not found." << std::endl;
+    return 1;
+  }
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
@@ -52,7 +60,16 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/,
                    int /*nCmdShow*/) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
-  // TODO: Command line arguments to get filename of obj file.
+  if (argc != 2) {
+    std::cerr << "Usage: d3d12_renderer.exe <obj file>" << std::endl;
+    return 1;
+  }
+
+  std::string objFilename = std::string(argv[1]);
+  if (!std::filesystem::exists(objFilename)) {
+    std::cerr << "File not found." << std::endl;
+    return 1;
+  }
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
