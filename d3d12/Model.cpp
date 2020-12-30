@@ -45,7 +45,7 @@ void Model::Init(ID3D12Device* device,
 
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = vertexBufferSize;
-  m_vertexBufferView.StrideInBytes = sizeof(ColorPass::VertexData);
+  m_vertexBufferView.StrideInBytes = sizeof(ObjData::Vertex);
 
   std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
   barriers.reserve(1 + 2 * objGroups.size());

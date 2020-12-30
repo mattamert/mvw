@@ -11,12 +11,6 @@ class ColorPass {
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
 
  public:
-  struct VertexData {
-    float position[3];
-    float textureCoord[2];
-    float color[3];
-  };
-
   void Initialize(ID3D12Device* device);
 
   ID3D12PipelineState* GetPipelineState();
