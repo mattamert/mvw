@@ -148,7 +148,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\PassThroughShaders.hlsl" />
     <FxCompile Include="..\..\d3d12\ShadowMapShaders.hlsl" />
-    <FxCompile Include="..\..\d3d12\SimpleCameraAndPositioning.hlsl" />
+    <FxCompile Include="..\..\d3d12\ColorPassShaders.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

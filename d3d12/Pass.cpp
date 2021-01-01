@@ -36,7 +36,6 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 }  // namespace
 
 void ColorPass::Initialize(ID3D12Device* device) {
-#if 1
   const CD3DX12_STATIC_SAMPLER_DESC staticSamplerDesc(
       /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC,
       D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -68,27 +67,8 @@ void ColorPass::Initialize(ID3D12Device* device) {
                                  rootSignatureBlob->GetBufferSize(),
                                  IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"SimpleCameraAndPositioning.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
-#else
-  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.NumParameters = 0;
-  rootSignatureDesc.pParameters = nullptr;
-  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-  rootSignatureDesc.NumStaticSamplers = 0;
-  rootSignatureDesc.pStaticSamplers = nullptr;
-
-  ComPtr<ID3DBlob> rootSignatureBlob;
-  ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                 &rootSignatureBlob, &errorBlob));
-  HR(m_device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
-                                   rootSignatureBlob->GetBufferSize(),
-                                   IID_PPV_ARGS(&m_rootSignature)));
-
-  HR(CompileShader(L"PassThroughShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"PassThroughShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
-#endif
+  HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
+  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
