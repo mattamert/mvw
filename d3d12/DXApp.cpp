@@ -217,8 +217,9 @@ void DXApp::DrawScene() {
 
   m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
 
-  size_t numberOfGroups = m_object.model.GetNumberOfGroups();
-  for (size_t i = 0; i < numberOfGroups; ++i) {
+  for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
+    // TODO: Eventually we will want to reference the texture in the shadow pass, so that we can
+    // accurately clip pixels that are fully transparent.
     //m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
@@ -271,8 +272,7 @@ void DXApp::DrawScene() {
 
   m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
 
-  //size_t numberOfGroups = m_object.model.GetNumberOfGroups();
-  for (size_t i = 0; i < numberOfGroups; ++i) {
+  for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
     m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
