@@ -115,7 +115,6 @@ void Model::Init(ID3D12Device* device,
         CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
         CD3DX12_RESOURCE_DESC textureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
             img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
-        textureResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE,
                                            &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
                                            nullptr, IID_PPV_ARGS(&modelGroup.m_texture)));
@@ -133,7 +132,7 @@ void Model::Init(ID3D12Device* device,
 
         barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
             modelGroup.m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
         srvDesc.Format = img.format;
