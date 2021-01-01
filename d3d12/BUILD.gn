@@ -43,7 +43,6 @@ executable("d3d12_renderer") {
 copy("d3d12_renderer_shaders") {
   sources = [
     "ColorPassShaders.hlsl",
-    "PassThroughShaders.hlsl",
     "ShadowMapShaders.hlsl",
   ]
 
