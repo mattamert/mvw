@@ -112,12 +112,12 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeShadowMapObjects() {
-  m_shadowMap.Initialize(m_device.Get(), 800, 800);
+  m_shadowMap.Initialize(m_device.Get(), 2000, 2000);
 
   m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_shadowMapCamera.width = 2;
-  m_shadowMapCamera.height = 2;
+  m_shadowMapCamera.width = 1.5;
+  m_shadowMapCamera.height = 1.5;
 
   // Initialize the constant buffers.
   m_shadowMapPassConstantBufferPerFrame =

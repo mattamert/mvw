@@ -172,6 +172,9 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
   psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+  psoDesc.RasterizerState.DepthBias = 100000;
+  psoDesc.RasterizerState.DepthBiasClamp = 0.f;
+  psoDesc.RasterizerState.SlopeScaledDepthBias = 1.f;
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
   psoDesc.SampleMask = UINT_MAX;
