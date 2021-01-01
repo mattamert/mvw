@@ -7,16 +7,16 @@
 #include <wrl/client.h>  // For ComPtr
 
 class Model {
+ private:
   struct Group {
     Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     size_t m_numIndices;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
-    D3D12_GPU_DESCRIPTOR_HANDLE m_descriptorHandle;
+    D3D12_GPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
     // TODO: Add material stuff.
   };
 
- private:
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
   std::vector<Group> m_groups;

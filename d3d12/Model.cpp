@@ -18,6 +18,7 @@
 
 using namespace Microsoft::WRL;
 
+// TODO: This function is gigantic. Needs to be split up / simplified.
 void Model::Init(ID3D12Device* device,
                  ID3D12GraphicsCommandList* cl,
                  ResourceGarbageCollector& garbageCollector,
@@ -143,7 +144,7 @@ void Model::Init(ID3D12Device* device,
         srvDesc.Texture2D.PlaneSlice = 0;
         srvDesc.Texture2D.ResourceMinLODClamp = 0;
         device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc, cpuHandle);
-        modelGroup.m_descriptorHandle = gpuHandle;
+        modelGroup.m_srvDescriptorHandle = gpuHandle;
 
         cpuHandle.Offset(incrementSize);
         gpuHandle.Offset(incrementSize);
@@ -265,10 +266,7 @@ D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView(size_t groupIndex) {
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE Model::GetTextureDescriptorHandle(size_t groupIndex) {
-  //return m_groups[groupIndex].m_descriptorHandle;
-  return CD3DX12_GPU_DESCRIPTOR_HANDLE(
-      this->m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), groupIndex,
-      m_srvDescriptorIncrement);
+  return m_groups[groupIndex].m_srvDescriptorHandle;
 }
 
 size_t Model::GetNumIndices(size_t groupIndex) {
