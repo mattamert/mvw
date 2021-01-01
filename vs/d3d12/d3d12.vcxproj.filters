@@ -55,6 +55,9 @@
     <ClCompile Include="..\..\d3d12\Animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\d3d12\ShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\comhelper.h">
@@ -105,12 +108,18 @@
     <ClInclude Include="..\..\d3d12\Animation.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\d3d12\ShadowMap.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\PassThroughShaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="..\..\d3d12\SimpleCameraAndPositioning.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\..\d3d12\ShadowMapShaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

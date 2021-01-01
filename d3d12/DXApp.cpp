@@ -57,6 +57,7 @@ void DXApp::Initialize(HWND hwnd,
   InitializePerWindowObjects(hwnd);
   InitializePerPassObjects();
   InitializeFenceObjects();
+  InitializeShadowMapObjects();
   InitializeAppObjects(m_objFilename);
 
   HR(m_cl->Close());
@@ -100,6 +101,7 @@ void DXApp::InitializePerWindowObjects(HWND hwnd) {
 
 void DXApp::InitializePerPassObjects() {
   m_colorPass.Initialize(m_device.Get());
+  m_shadowMapPass.Initialize(m_device.Get());
 }
 
 void DXApp::InitializeFenceObjects() {
@@ -107,6 +109,21 @@ void DXApp::InitializeFenceObjects() {
   m_fenceEvent = CreateEvent(nullptr, /*bManualRestart*/ FALSE, /*bInitialState*/ FALSE, nullptr);
   if (m_fenceEvent == nullptr)
     HR(HRESULT_FROM_WIN32(GetLastError()));
+}
+
+void DXApp::InitializeShadowMapObjects() {
+  m_shadowMap.Initialize(m_device.Get(), 800, 800);
+
+  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 2, 1, 1.f);
+  m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_shadowMapCamera.width = 2;
+  m_shadowMapCamera.height = 2;
+
+  // Initialize the constant buffers.
+  m_shadowMapPassConstantBufferPerFrame =
+      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
+  m_shadowMapPassConstantBufferPerObject =
+      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
 }
 
 void DXApp::InitializeAppObjects(const std::string& objFilename) {
@@ -157,34 +174,78 @@ void DXApp::DrawScene() {
   double progress = Animation::TickAnimation(m_objectRotationAnimation);
   m_object.rotationY = progress * 2 * 3.14159265;
 
+  HR(m_directCommandAllocator->Reset());
+  HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
+
+  DirectX::XMFLOAT4X4 modelTransform4x4 = m_object.GenerateModelTransform4x4();
+
+  // ------------- Shadow Map Pass --------------
+  m_cl->SetPipelineState(m_shadowMapPass.GetPipelineState());
+  m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
+
+  // Set up the constant buffer for the per-frame data.
+  DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 =
+      m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+  ResourceHelper::UpdateBuffer(m_shadowMapPassConstantBufferPerFrame.Get(),
+                               &shadowMapViewPerspective4x4, sizeof(shadowMapViewPerspective4x4));
+  m_cl->SetGraphicsRootConstantBufferView(
+      0, m_shadowMapPassConstantBufferPerFrame->GetGPUVirtualAddress());
+
+  // Set up the constant buffer for the per-object data.
+  ResourceHelper::UpdateBuffer(m_shadowMapPassConstantBufferPerObject.Get(), &modelTransform4x4,
+                               sizeof(modelTransform4x4));
+  m_cl->SetGraphicsRootConstantBufferView(
+      1, m_shadowMapPassConstantBufferPerObject->GetGPUVirtualAddress());
+
+  CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_GENERIC_READ,
+      D3D12_RESOURCE_STATE_DEPTH_WRITE);
+  m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
+
+  unsigned int shadowMapWidth = m_shadowMap.GetWidth();
+  unsigned int shadowMapHeight = m_shadowMap.GetHeight();
+  CD3DX12_VIEWPORT shadowMapClientAreaViewport(0.0f, 0.0f, static_cast<float>(shadowMapWidth),
+                                               static_cast<float>(shadowMapHeight));
+  CD3DX12_RECT shadowMapScissorRect(0, 0, shadowMapWidth, shadowMapHeight);
+  m_cl->RSSetViewports(1, &shadowMapClientAreaViewport);
+  m_cl->RSSetScissorRects(1, &shadowMapScissorRect);
+
+  D3D12_CPU_DESCRIPTOR_HANDLE shadowMapDSVHandle = m_shadowMap.GetDescriptorHandle();
+  m_cl->OMSetRenderTargets(0, nullptr, FALSE, &shadowMapDSVHandle);
+  m_cl->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
+  m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+
+  size_t numberOfGroups = m_object.model.GetNumberOfGroups();
+  for (size_t i = 0; i < numberOfGroups; ++i) {
+    //m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
+    m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
+    m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
+  }
+
+  shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
+      D3D12_RESOURCE_STATE_GENERIC_READ);
+  m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
+
+  // ---------------- Color Pass ----------------
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_window.GetCurrentBackBufferRTVHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_window.GetDepthStencilViewHandle();
-
-  HR(m_directCommandAllocator->Reset());
-  HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
   m_cl->SetPipelineState(m_colorPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMMATRIX viewPerspective =
-      m_camera.GenerateViewPerspectiveTransform(m_window.GetAspectRatio());
-  DirectX::XMFLOAT4X4 viewPerspective4x4;
-  DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
-
+  DirectX::XMFLOAT4X4 viewPerspective4x4 = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
   ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4,
                                sizeof(viewPerspective4x4));
   m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
-  DirectX::XMFLOAT4X4 modelTransform4x4;
-  DirectX::XMStoreFloat4x4(&modelTransform4x4, modelTransform);
-
   ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &modelTransform4x4,
                                sizeof(modelTransform4x4));
-
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
   unsigned int width = m_window.GetWidth();
@@ -210,7 +271,7 @@ void DXApp::DrawScene() {
 
   m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
 
-  size_t numberOfGroups = m_object.model.GetNumberOfGroups();
+  //size_t numberOfGroups = m_object.model.GetNumberOfGroups();
   for (size_t i = 0; i < numberOfGroups; ++i) {
     m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));

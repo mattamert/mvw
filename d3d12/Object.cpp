@@ -1,6 +1,6 @@
 #include "d3d12/Object.h"
 
-DirectX::XMMATRIX Object::GenerateModelTransform() {
+DirectX::XMMATRIX Object::GenerateModelTransform() const {
   const ObjData::AxisAlignedBounds bounds = this->model.GetBounds();
   float midpoint[3];
   midpoint[0] = (bounds.max[0] + bounds.min[0]) / 2;
@@ -17,4 +17,11 @@ DirectX::XMMATRIX Object::GenerateModelTransform() {
 
   DirectX::XMMATRIX modelTransform = translationToOrigin * scale * rotation * translation;
   return modelTransform;
+}
+
+DirectX::XMFLOAT4X4 Object::GenerateModelTransform4x4() const {
+  DirectX::XMFLOAT4X4 modelTransform4x4;
+  DirectX::XMMATRIX modelTransform = GenerateModelTransform();
+  DirectX::XMStoreFloat4x4(&modelTransform4x4, modelTransform);
+  return modelTransform4x4;
 }

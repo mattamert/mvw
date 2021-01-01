@@ -37,7 +37,7 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
 void ColorPass::Initialize(ID3D12Device* device) {
 #if 1
-  const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+  const CD3DX12_STATIC_SAMPLER_DESC staticSamplerDesc(
       /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC,
       D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
       D3D12_TEXTURE_ADDRESS_MODE_WRAP);
@@ -58,7 +58,7 @@ void ColorPass::Initialize(ID3D12Device* device) {
   rootSignatureDesc.pParameters = parameters;
   rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
   rootSignatureDesc.NumStaticSamplers = 1;
-  rootSignatureDesc.pStaticSamplers = &pointClamp;
+  rootSignatureDesc.pStaticSamplers = &staticSamplerDesc;
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
@@ -126,5 +126,73 @@ ID3D12PipelineState* ColorPass::GetPipelineState() {
 }
 
 ID3D12RootSignature* ColorPass::GetRootSignature() {
+  return m_rootSignature.Get();
+}
+
+void ShadowMapPass::Initialize(ID3D12Device* device) {
+  // This is the sampler for determining if the texture at a certain point is fully transparent;
+  // therefore, just use point sampling.
+  const CD3DX12_STATIC_SAMPLER_DESC pointSampler(
+      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
+      D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+      D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+  CD3DX12_ROOT_PARAMETER parameters[2] = {};
+  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
+    D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
+    D3D12_SHADER_VISIBILITY_VERTEX);
+
+  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+  rootSignatureDesc.NumParameters = 2;
+  rootSignatureDesc.pParameters = parameters;
+  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+  rootSignatureDesc.NumStaticSamplers = 1;
+  rootSignatureDesc.pStaticSamplers = &pointSampler;
+
+  ComPtr<ID3DBlob> rootSignatureBlob;
+  ComPtr<ID3DBlob> errorBlob;
+  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
+    &rootSignatureBlob, &errorBlob));
+  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
+    rootSignatureBlob->GetBufferSize(),
+    IID_PPV_ARGS(&m_rootSignature)));
+
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
+
+  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
+      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"TEXCOORD", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+  };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = { inputElements, _countof(inputElements) };
+  psoDesc.pRootSignature = m_rootSignature.Get();
+  psoDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
+  psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
+  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 0; // Only render depths for the shadow map.
+  psoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+  psoDesc.SampleDesc.Count = 1;
+  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+
+  HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+}
+
+ID3D12PipelineState* ShadowMapPass::GetPipelineState() {
+  return m_pipelineState.Get();
+}
+
+ID3D12RootSignature* ShadowMapPass::GetRootSignature() {
   return m_rootSignature.Get();
 }

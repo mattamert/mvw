@@ -29,6 +29,8 @@ executable("d3d12_renderer") {
     "ResourceGarbageCollector.h",
     "ResourceHelper.cpp",
     "ResourceHelper.h",
+    "ShadowMap.cpp",
+    "ShadowMap.h",
     "Timer.cpp",
     "Timer.h",
     "WindowProxy.cpp",
@@ -42,6 +44,7 @@ copy("d3d12_renderer_shaders") {
   sources = [
     "PassThroughShaders.hlsl",
     "SimpleCameraAndPositioning.hlsl",
+    "ShadowMapShaders.hlsl",
   ]
 
   outputs = [ "$root_out_dir/{{source_file_part}}" ]

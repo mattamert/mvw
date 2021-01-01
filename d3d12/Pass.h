@@ -16,3 +16,17 @@ class ColorPass {
   ID3D12PipelineState* GetPipelineState();
   ID3D12RootSignature* GetRootSignature();
 };
+
+// TODO: Maybe want to have a base class that these classes inherit from?
+class ShadowMapPass {
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+  Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+  Microsoft::WRL::ComPtr<ID3DBlob> m_vertexShader;
+  Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
+
+public:
+  void Initialize(ID3D12Device* device);
+
+  ID3D12PipelineState* GetPipelineState();
+  ID3D12RootSignature* GetRootSignature();
+};

@@ -75,8 +75,8 @@ void WindowTarget::Initialize(IDXGIFactory2* factory,
 
 void WindowTarget::InitializeDepthStemcilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
   CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
-  D3D12_RESOURCE_DESC depthStencilBufferDesc =
-      CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, width, height);
+  D3D12_RESOURCE_DESC depthStencilBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+      DXGI_FORMAT_D32_FLOAT, width, height, /*arraySize*/ 1, /*mipLevels*/ 1);
   depthStencilBufferDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
   D3D12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.f, 0);
   HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &depthStencilBufferDesc,
