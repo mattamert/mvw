@@ -41,19 +41,24 @@ void ColorPass::Initialize(ID3D12Device* device) {
       D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
       D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
-  CD3DX12_DESCRIPTOR_RANGE texTable;
-  texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+  CD3DX12_DESCRIPTOR_RANGE shadowMapTable;
+  shadowMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
-  CD3DX12_ROOT_PARAMETER parameters[3] = {};
+  CD3DX12_DESCRIPTOR_RANGE texTable;
+  texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+  CD3DX12_ROOT_PARAMETER parameters[4] = {};
   parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
                                          D3D12_SHADER_VISIBILITY_VERTEX);
   parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
                                          D3D12_SHADER_VISIBILITY_VERTEX);
-  parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,
+  parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &shadowMapTable,
+                                      D3D12_SHADER_VISIBILITY_PIXEL);
+  parameters[3].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,
                                       D3D12_SHADER_VISIBILITY_PIXEL);
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-  rootSignatureDesc.NumParameters = 3;
+  rootSignatureDesc.NumParameters = 4;
   rootSignatureDesc.pParameters = parameters;
   rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
   rootSignatureDesc.NumStaticSamplers = 1;
@@ -61,8 +66,13 @@ void ColorPass::Initialize(ID3D12Device* device) {
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                 &rootSignatureBlob, &errorBlob));
+  if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
+    &rootSignatureBlob, &errorBlob))) {
+    if (errorBlob) {
+      OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+    }
+    HR(E_FAIL);
+  }
   HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
                                  rootSignatureBlob->GetBufferSize(),
                                  IID_PPV_ARGS(&m_rootSignature)));

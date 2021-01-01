@@ -6,7 +6,8 @@ cbuffer PerObjectData : register(b1) {
   float4x4 worldTransform;
 }
 
-Texture2D objectTexture : register(t0);
+Texture2D shadowMap     : register(t0);
+Texture2D objectTexture : register(t1);
 SamplerState pointClamp : register(s0);
 
 struct PSInput {

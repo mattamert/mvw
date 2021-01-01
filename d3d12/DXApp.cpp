@@ -210,7 +210,7 @@ void DXApp::DrawScene() {
   m_cl->RSSetViewports(1, &shadowMapClientAreaViewport);
   m_cl->RSSetScissorRects(1, &shadowMapScissorRect);
 
-  D3D12_CPU_DESCRIPTOR_HANDLE shadowMapDSVHandle = m_shadowMap.GetDescriptorHandle();
+  D3D12_CPU_DESCRIPTOR_HANDLE shadowMapDSVHandle = m_shadowMap.GetDSVDescriptorHandle();
   m_cl->OMSetRenderTargets(0, nullptr, FALSE, &shadowMapDSVHandle);
   m_cl->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -267,13 +267,19 @@ void DXApp::DrawScene() {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+
+  // TODO: Binding descriptor heaps multiple times per frame is apparently bad. Should probably work
+  // out how best to handle descriptors.
+  ID3D12DescriptorHeap* shadowMapSRVHeap[] = {m_shadowMap.GetSRVHeap()};
+  m_cl->SetDescriptorHeaps(1, shadowMapSRVHeap);
+  m_cl->SetGraphicsRootDescriptorTable(2, m_shadowMap.GetSRVDescriptorHandle());
+
   ID3D12DescriptorHeap* heaps[] = {m_object.model.GetSRVDescriptorHeap()};
   m_cl->SetDescriptorHeaps(1, heaps);
 
-  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
-
   for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
-    m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
+    m_cl->SetGraphicsRootDescriptorTable(3, m_object.model.GetTextureDescriptorHandle(i));
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
   }
