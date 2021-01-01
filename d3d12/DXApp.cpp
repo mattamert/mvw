@@ -114,7 +114,7 @@ void DXApp::InitializeFenceObjects() {
 void DXApp::InitializeShadowMapObjects() {
   m_shadowMap.Initialize(m_device.Get(), 800, 800);
 
-  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 2, 1, 1.f);
+  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
   m_shadowMapCamera.width = 2;
   m_shadowMapCamera.height = 2;
@@ -152,7 +152,7 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
 
   // Initialize the constant buffers.
   m_constantBufferPerFrame =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
+      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4) * 2);
   m_constantBufferPerObject =
       ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
 }
@@ -173,6 +173,7 @@ void DXApp::DrawScene() {
   // Update animation.
   double progress = Animation::TickAnimation(m_objectRotationAnimation);
   m_object.rotationY = progress * 2 * 3.14159265;
+  //m_object.rotationY = 0;
 
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
@@ -239,7 +240,9 @@ void DXApp::DrawScene() {
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMFLOAT4X4 viewPerspective4x4 = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  DirectX::XMFLOAT4X4 viewPerspective4x4[2] = {
+      m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio()),
+      shadowMapViewPerspective4x4};
   ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4,
                                sizeof(viewPerspective4x4));
   m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());

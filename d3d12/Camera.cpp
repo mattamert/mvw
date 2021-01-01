@@ -34,7 +34,7 @@ DirectX::XMMATRIX OrthographicCamera::GenerateViewPerspectiveTransform() const {
 
   DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(pos, look_at, up);
   DirectX::XMMATRIX orthographicMatrix =
-      DirectX::XMMatrixOrthographicLH(this->width, this->height, 0.f, 1000.f);
+      DirectX::XMMatrixOrthographicLH(this->width, this->height, 0.f, 5.f);
 
   // Future note: DirectXMath uses row-vector matrices and row-major order for the matrices.
   // This means that matrix multplication with the DirectXMath Library should be done as

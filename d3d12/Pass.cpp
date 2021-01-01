@@ -36,10 +36,15 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 }  // namespace
 
 void ColorPass::Initialize(ID3D12Device* device) {
-  const CD3DX12_STATIC_SAMPLER_DESC staticSamplerDesc(
-      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC,
-      D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-      D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+  const CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {
+      CD3DX12_STATIC_SAMPLER_DESC(
+          /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC,
+          D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+          D3D12_TEXTURE_ADDRESS_MODE_WRAP),
+      CD3DX12_STATIC_SAMPLER_DESC(
+          /*shaderRegister*/ 1, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
+          D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+          D3D12_TEXTURE_ADDRESS_MODE_BORDER)};
 
   CD3DX12_DESCRIPTOR_RANGE shadowMapTable;
   shadowMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
@@ -61,8 +66,8 @@ void ColorPass::Initialize(ID3D12Device* device) {
   rootSignatureDesc.NumParameters = 4;
   rootSignatureDesc.pParameters = parameters;
   rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-  rootSignatureDesc.NumStaticSamplers = 1;
-  rootSignatureDesc.pStaticSamplers = &staticSamplerDesc;
+  rootSignatureDesc.NumStaticSamplers = 2;
+  rootSignatureDesc.pStaticSamplers = staticSamplers;
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
