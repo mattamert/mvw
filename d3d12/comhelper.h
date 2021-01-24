@@ -1,7 +1,6 @@
 #pragma once
 
-//#if defined(_DEBUG)
-#if 1
+#if defined(_DEBUG)
 //#define HR(hr) if (!SUCCEEDED(hr)) { __debugbreak(); throw; }
 
 inline void HR(HRESULT hr) {

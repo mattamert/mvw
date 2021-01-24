@@ -14,9 +14,9 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
 
   UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
-  flags |= D3DCOMPILE_DEBUG;
+  flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
-
+  
   ID3DBlob* shaderBlob = nullptr;
   ID3DBlob* errorBlob = nullptr;
   HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint,

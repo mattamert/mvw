@@ -1,0 +1,80 @@
+1. Right now, we keep ID3D12Resources for each possible constant buffer, and no way to dynaically allocate them.
+   e.g. We keep ComPtrs to per-frame and per-object constant buffer (though really, both apply to only one object).
+   This has the issue that we can't add new objects to the scene.
+   Ideally, we'd find some way to do this more dynamically; basically, have some way to sanely allocate buffers for what we will need.
+2. Descriptor heaps need to be more dynamic in the same vein; right now we allocate everything in separate heaps.
+   We need to find a better way to do this.
+3. The way that we upload models & texture data to the GPU is not clean, and often takes too much memory
+   (I ran out of memory on my surface book trying to load a model with very detailed textures).
+
+
+
+
+
+--- a/d3d12/ColorPassShaders.hlsl
++++ b/d3d12/ColorPassShaders.hlsl
+@@ -11,6 +11,8 @@ Texture2D shadowMap : register(t0);
+ Texture2D objectTexture : register(t1);
+ SamplerState aniSampler : register(s0);
+ SamplerState pointClamp : register(s1);
++SamplerComparisonState pointClampComp : register(s2);
++//SamplerState pointClamp : register(s1);
+
+ struct PSInput {
+   float4 position : SV_POSITION;
+@@ -39,9 +41,15 @@ float4 PSMain(PSInput input) : SV_TARGET {
+
+   float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - (input.shadowMapPos.y + 1) / 2);
+   float depthInShadowMap = input.shadowMapPos.z;
++
+   float visibleDepthFromShadowMap = shadowMap.Sample(pointClamp, shadowMapTexCoord);
+   if (depthInShadowMap > visibleDepthFromShadowMap)
+     texValue.xyz *= 0.5;
+
+   return texValue;
++
++  //float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
++  //texValue.xyz *= (visibility + 1) / 2;
++  //return float4(visibility, visibility, visibility, 1.f);
++  //return float4(depthInShadowMap, depthInShadowMap, depthInShadowMap, 1.f);
+ }
+diff --git a/d3d12/DXApp.cpp b/d3d12/DXApp.cpp
+index fd42b00..ecf55a4 100644
+--- a/d3d12/DXApp.cpp
++++ b/d3d12/DXApp.cpp
+@@ -112,7 +112,7 @@ void DXApp::InitializeFenceObjects() {
+ }
+
+ void DXApp::InitializeShadowMapObjects() {
+-  m_shadowMap.Initialize(m_device.Get(), 2000, 2000);
++  m_shadowMap.Initialize(m_device.Get(), 2048, 2048);
+
+   m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
+   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+diff --git a/d3d12/Pass.cpp b/d3d12/Pass.cpp
+index c5710f1..f77d5b8 100644
+--- a/d3d12/Pass.cpp
++++ b/d3d12/Pass.cpp
+@@ -44,7 +44,12 @@ void ColorPass::Initialize(ID3D12Device* device) {
+       CD3DX12_STATIC_SAMPLER_DESC(
+           /*shaderRegister*/ 1, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
+           D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+-          D3D12_TEXTURE_ADDRESS_MODE_BORDER)};
++          D3D12_TEXTURE_ADDRESS_MODE_BORDER),
++      CD3DX12_STATIC_SAMPLER_DESC(
++          /*shaderRegister*/ 2, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
++          D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
++          D3D12_TEXTURE_ADDRESS_MODE_BORDER, /*mipLODBias*/ 0.f, /*maxAnisotropy*/ 16,
++          D3D12_COMPARISON_FUNC_LESS_EQUAL)};
+
+   CD3DX12_DESCRIPTOR_RANGE shadowMapTable;
+   shadowMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+@@ -66,7 +71,7 @@ void ColorPass::Initialize(ID3D12Device* device) {
+   rootSignatureDesc.NumParameters = 4;
+   rootSignatureDesc.pParameters = parameters;
+   rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+-  rootSignatureDesc.NumStaticSamplers = 2;
++  rootSignatureDesc.NumStaticSamplers = 3;
+   rootSignatureDesc.pStaticSamplers = staticSamplers;
+
+   ComPtr<ID3DBlob> rootSignatureBlob;
