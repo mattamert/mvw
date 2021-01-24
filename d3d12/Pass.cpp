@@ -42,9 +42,10 @@ void ColorPass::Initialize(ID3D12Device* device) {
           D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
           D3D12_TEXTURE_ADDRESS_MODE_WRAP),
       CD3DX12_STATIC_SAMPLER_DESC(
-          /*shaderRegister*/ 1, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
+          /*shaderRegister*/ 1, /*D3D12_FILTER*/ D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT,
           D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-          D3D12_TEXTURE_ADDRESS_MODE_BORDER)};
+          D3D12_TEXTURE_ADDRESS_MODE_BORDER, /*mipLODBias*/ 0.f, /*maxAnisotropy*/ 16,
+          D3D12_COMPARISON_FUNC_LESS_EQUAL) };
 
   CD3DX12_DESCRIPTOR_RANGE shadowMapTable;
   shadowMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
@@ -172,7 +173,7 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
   psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
-  psoDesc.RasterizerState.DepthBias = 100000;
+  psoDesc.RasterizerState.DepthBias = 50000;
   psoDesc.RasterizerState.DepthBiasClamp = 0.f;
   psoDesc.RasterizerState.SlopeScaledDepthBias = 1.f;
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);

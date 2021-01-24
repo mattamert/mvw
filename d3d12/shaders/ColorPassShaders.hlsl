@@ -10,7 +10,7 @@ cbuffer PerObjectData : register(b1) {
 Texture2D shadowMap : register(t0);
 Texture2D objectTexture : register(t1);
 SamplerState aniSampler : register(s0);
-SamplerState pointClamp : register(s1);
+SamplerComparisonState pointClampComp : register(s1);
 
 struct PSInput {
   float4 position : SV_POSITION;
@@ -39,9 +39,9 @@ float4 PSMain(PSInput input) : SV_TARGET {
 
   float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - (input.shadowMapPos.y + 1) / 2);
   float depthInShadowMap = input.shadowMapPos.z;
-  float visibleDepthFromShadowMap = shadowMap.Sample(pointClamp, shadowMapTexCoord);
-  if (depthInShadowMap > visibleDepthFromShadowMap)
-    texValue.xyz *= 0.5;
+
+  float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
+  texValue.xyz *= (visibility + 1) / 2;
 
   return texValue;
 }
