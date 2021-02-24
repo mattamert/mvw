@@ -50,6 +50,12 @@ class DXApp {
   std::string m_objFilename;
   Object m_object;
   Animation m_objectRotationAnimation;
+  bool m_isLeftButtonDown = false;
+  int m_initialButtonDownPosX;
+  int m_initialButtonDownPosY;
+  int m_currentPointerX;
+  int m_currentPointerY;
+  int m_lastXOffset = 0;
 
   PinholeCamera m_camera;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;
@@ -76,4 +82,9 @@ class DXApp {
 
   void FlushGPUWork();
   void WaitForNextFrame();
+
+  // Input.
+  void OnLeftButtonDown(int x, int y);
+  void OnLeftButtonUp(int x, int y);
+  void OnPointerUpdate(int x, int y);
 };

@@ -1,6 +1,7 @@
 #include "DXApp.h"
 
 #include <Windows.h>
+#include <windowsx.h> // For GET_X_LPARAM & family.
 #include <d3d12.h>
 #include <d3dcompiler.h>
 
@@ -154,7 +155,9 @@ void DXApp::DrawScene() {
   WaitForNextFrame();
 
   // Update animation.
-  double progress = Animation::TickAnimation(m_objectRotationAnimation);
+  //double progress = Animation::TickAnimation(m_objectRotationAnimation);
+  int offsetX = m_lastXOffset + (m_currentPointerX - m_initialButtonDownPosX);
+  double progress = (double)-offsetX / 500.0;
   m_object.rotationY = progress * 2 * 3.14159265;
 
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
@@ -263,6 +266,40 @@ bool DXApp::HandleMessages() {
         m_window.AddPendingResize(width, height);
         break;
       }
+
+      case WM_POINTERDOWN:
+        if (IS_POINTER_FIRSTBUTTON_WPARAM(msg.wParam)) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonDown(x, y);
+        }
+        break;
+
+      case WM_POINTERUP:
+        if (IS_POINTER_FIRSTBUTTON_WPARAM(msg.wParam)) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonUp(x, y);
+        }
+        break;
+
+      // Touch input never actually sends a WM_POINTERUP for some reason, but rather WM_POINTERLEAVE.
+      case WM_POINTERLEAVE:
+        if (m_isLeftButtonDown) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonUp(x, y);
+        }
+        break;
+
+      case WM_POINTERUPDATE: {
+        int x = GET_X_LPARAM(msg.lParam);
+        int y = GET_Y_LPARAM(msg.lParam);
+        OnPointerUpdate(x, y);
+        break;
+      }
+
+
       case WM_DESTROY:
         return true;
     }
@@ -285,4 +322,34 @@ void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
   }
 
   app->FlushGPUWork();
+}
+
+void DXApp::OnLeftButtonDown(int x, int y) {
+  m_isLeftButtonDown = true;
+  m_initialButtonDownPosX = x;
+  m_initialButtonDownPosY = y;
+
+  m_currentPointerX = x;
+  m_currentPointerY = y;
+
+  std::cout << "DOWN. lastXOffset: " << m_lastXOffset << ", initialX: " << x << ", initialY: " << x << std::endl;
+}
+
+void DXApp::OnLeftButtonUp(int x, int y) {
+  m_lastXOffset = m_lastXOffset + (x - m_initialButtonDownPosX);
+  m_isLeftButtonDown = false;
+
+  m_initialButtonDownPosX = 0;
+  m_initialButtonDownPosY = 0;
+  m_currentPointerX = 0;
+  m_currentPointerY = 0;
+
+  std::cout << "UP. lastXOffset: " << m_lastXOffset << ", initialX: " << x << ", initialY: " << x << std::endl;
+}
+
+void DXApp::OnPointerUpdate(int x, int y) {
+  if (m_isLeftButtonDown) {
+    m_currentPointerX = x;
+    m_currentPointerY = y;
+  }
 }

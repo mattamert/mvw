@@ -27,6 +27,10 @@ void RunMessageLoop() {
 int main(int argc, char** argv) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
+  if (!IsMouseInPointerEnabled()) {
+    (void)EnableMouseInPointer(TRUE);
+  }
+
   std::string objFilename =
       (argc > 1) ? std::string(argv[1])
                  : "C:\\Users\\Matt\\Documents\\Assets\\StanfordBunnyTextured\\20180310_KickAir8P_"

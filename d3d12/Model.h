@@ -8,7 +8,6 @@
 
 class Model {
   struct Group {
-    // TODO: Naming. We probably should have "m_" prefix.
     Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     size_t m_numIndices;
