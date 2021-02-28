@@ -351,7 +351,7 @@ bool Tokenizer::AcceptString(std::string* str) {
 
 bool Tokenizer::AcceptNewLine() {
   ConsumeWhitespace();
-  if (m_data[m_index] == '\n') {
+  if (m_index < m_data.size() && m_data[m_index] == '\n') {
     m_index++;
     return true;
   }
