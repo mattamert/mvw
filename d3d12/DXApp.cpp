@@ -147,14 +147,14 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
 
   m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
 
-  m_camera.position_ = DirectX::XMFLOAT4(1, 0.25, 1, 1.f);
+  m_camera.position_ = DirectX::XMFLOAT4(1.25, 0.25, 1.25, 1.f);
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
 
   // Initialize the constant buffers.
   m_constantBufferPerFrame =
       ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4) * 2);
   m_constantBufferPerObject =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
+      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4) * 2);
 }
 
 void DXApp::HandleResizeIfNecessary() {
@@ -247,9 +247,18 @@ void DXApp::DrawScene() {
                                sizeof(viewPerspective4x4));
   m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
 
+  DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
+  DirectX::XMMATRIX modelTransformModified = modelTransform;
+  modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
+  DirectX::XMMATRIX modelTransformInverseTranspose = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
+
+  DirectX::XMFLOAT4X4 transforms4x4[2];
+  DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
+  DirectX::XMStoreFloat4x4(&transforms4x4[1], modelTransformInverseTranspose);
+
   // Set up the constant buffer for the per-object data.
-  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &modelTransform4x4,
-                               sizeof(modelTransform4x4));
+  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &transforms4x4,
+                               sizeof(DirectX::XMFLOAT4X4) * 2);
   m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
 
   unsigned int width = m_window.GetWidth();
