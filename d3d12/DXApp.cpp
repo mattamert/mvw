@@ -254,6 +254,7 @@ void DXApp::DrawScene() {
 
   DirectX::XMFLOAT4X4 transforms4x4[2];
   DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
+  // TODO: normals don't need the full 4x4, only 3x3. We should use XMStoreFloat3x3 instead.
   DirectX::XMStoreFloat4x4(&transforms4x4[1], modelTransformInverseTranspose);
 
   // Set up the constant buffer for the per-object data.

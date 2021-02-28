@@ -1,4 +1,4 @@
-#include "Pass.h"
+#include "d3d12/Pass.h"
 
 #include <d3dcompiler.h>
 
@@ -57,7 +57,7 @@ void ColorPass::Initialize(ID3D12Device* device) {
   parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
                                          D3D12_SHADER_VISIBILITY_VERTEX);
   parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
-                                         D3D12_SHADER_VISIBILITY_ALL);
+                                         D3D12_SHADER_VISIBILITY_VERTEX);
   parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &shadowMapTable,
                                       D3D12_SHADER_VISIBILITY_PIXEL);
   parameters[3].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,

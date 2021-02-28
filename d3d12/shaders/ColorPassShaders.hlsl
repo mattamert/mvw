@@ -29,42 +29,32 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   result.tex = tex;
   result.shadowMapPos = mul(shadowCameraModelViewProjection, float4(pos, 1.f));
 
-  // TODO: This isn't robust, it only works when the transformation matrix is orthogonal.
-  //       We would ideally want to multiply it by the transpose of the inverse.
-  //       For now, we can guarantee it's orthogonal, but that may change in the future.
-  //result.normal.xyz = normalize(mul(worldTransform, float4(normal, 1.f)).xyz);
-  result.normal = float4(normal, 1);
-  //result.normal = normal;
+  // Normals shouldn't be used as homogeneous since they don't have a position. We therefore use 0 as the w component.
+  // We can simplify this further by instead just using a 3x3 matrix.
+  result.normal = normalize(mul(worldTransformInverseTranspose, float4(normal, 0)));
 
   return result;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET{
   float4 texValue = objectTexture.Sample(aniSampler, input.tex);
-  //if (texValue.w == 0.f) {
-  //  discard;
-  //}
+  if (texValue.w == 0.f) {
+    discard;
+  }
 
-  float4 norm = mul(worldTransformInverseTranspose, input.normal);
-  norm = float4(normalize(norm.xyz), 1.f);
+  // TODO: Don't hard-code light direction. Make it a parameter in the PerFrameData buffer.
+  float lambertFactor = dot(normalize(input.normal.xyz), normalize(float3(-1, 1, 1)));
 
-  float lambertFactor = dot(norm.xyz, normalize(float3(-1, 1, 1)));
+  float2 shadowMapTexCoord =
+      float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
+  float depthInShadowMap = input.shadowMapPos.z;
+  float visibility =
+      shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
 
-  //if (dot(norm.xyz, normalize(float3(-1, 1, 1))) < 0) {
-  //  texValue.xyz *= 0.5;
-  //} else {
-    float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - (input.shadowMapPos.y + 1) / 2);
-    float depthInShadowMap = input.shadowMapPos.z;
-
-    float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
-    visibility = (visibility + 1) / 2;
-
-  //}
+  visibility = (visibility + 1) / 2;
 
   float shadowAmount = clamp(lambertFactor, 0.5, visibility);
   texValue *= shadowAmount;
 
   return texValue;
-
-  //return norm;
 }
