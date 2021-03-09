@@ -9,8 +9,8 @@
 
 class WindowProxy {
  private:
-  std::shared_ptr<MessageQueue> messageQueue;
-  std::thread renderThread;
+  std::shared_ptr<MessageQueue> m_messageQueue;
+  std::thread m_renderThread;
 
  public:
   WindowProxy() = default;

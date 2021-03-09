@@ -104,22 +104,22 @@ void ShowDXWindow(HWND hwnd) {
 }  // namespace
 
 void WindowProxy::Initialize(std::string filename) {
-  messageQueue = std::make_shared<MessageQueue>();
+  m_messageQueue = std::make_shared<MessageQueue>();
 
   HWND hwnd = CreateDXWindow(this, L"mvw", 640, 480);
 
   std::unique_ptr<DXApp> app = std::make_unique<DXApp>();
-  app->Initialize(hwnd, messageQueue, std::move(filename));
+  app->Initialize(hwnd, m_messageQueue, std::move(filename));
 
   ShowDXWindow(hwnd);
 
-  renderThread = std::thread(DXApp::RunRenderLoop, std::move(app));
+  m_renderThread = std::thread(DXApp::RunRenderLoop, std::move(app));
 }
 
 void WindowProxy::WaitForRenderThreadToFinish() {
-  renderThread.join();
+  m_renderThread.join();
 }
 
 void WindowProxy::PushMessage(MSG msg) {
-  messageQueue->Push(msg);
+  m_messageQueue->Push(msg);
 }
