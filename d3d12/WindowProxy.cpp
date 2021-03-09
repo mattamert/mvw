@@ -106,7 +106,7 @@ void ShowDXWindow(HWND hwnd) {
 void WindowProxy::Initialize(std::string filename) {
   messageQueue = std::make_shared<MessageQueue>();
 
-  HWND hwnd = CreateDXWindow(this, L"DXApp", 640, 480);
+  HWND hwnd = CreateDXWindow(this, L"mvw", 640, 480);
 
   std::unique_ptr<DXApp> app = std::make_unique<DXApp>();
   app->Initialize(hwnd, messageQueue, std::move(filename));
