@@ -70,10 +70,10 @@ void WindowTarget::Initialize(IDXGIFactory2* factory,
     m_backBufferDescriptorHandles[i] = descriptorPtr;
   }
 
-  InitializeDepthStemcilMembers(device, m_clientWidth, m_clientHeight);
+  InitializeDepthStencilMembers(device, m_clientWidth, m_clientHeight);
 }
 
-void WindowTarget::InitializeDepthStemcilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
+void WindowTarget::InitializeDepthStencilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
   CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
   D3D12_RESOURCE_DESC depthStencilBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
       DXGI_FORMAT_D32_FLOAT, width, height, /*arraySize*/ 1, /*mipLevels*/ 1);
@@ -126,7 +126,7 @@ void WindowTarget::HandlePendingResize() {
   HR(m_swapChain->GetDevice(IID_PPV_ARGS(&device)));
 
   m_depthStencilBuffer.Reset();
-  InitializeDepthStemcilMembers(device.Get(), m_pendingClientWidth, m_pendingClientHeight);
+  InitializeDepthStencilMembers(device.Get(), m_pendingClientWidth, m_pendingClientHeight);
 
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
     m_backBuffers[i].Reset();

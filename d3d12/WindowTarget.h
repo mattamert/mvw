@@ -24,7 +24,7 @@ class WindowTarget {
   unsigned int m_pendingClientHeight;
   bool m_isResizePending = false;
 
-  void InitializeDepthStemcilMembers(ID3D12Device* device, unsigned int width, unsigned int height);
+  void InitializeDepthStencilMembers(ID3D12Device* device, unsigned int width, unsigned int height);
 
  public:
   void Initialize(IDXGIFactory2* factory,
