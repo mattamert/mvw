@@ -58,6 +58,9 @@
     <ClCompile Include="..\..\d3d12\ShadowMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\d3d12\ConstantBufferAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\comhelper.h">
@@ -109,6 +112,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\ShadowMap.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\d3d12\ConstantBufferAllocator.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

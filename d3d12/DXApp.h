@@ -10,6 +10,7 @@
 
 #include "d3d12/Animation.h"
 #include "d3d12/Camera.h"
+#include "d3d12/ConstantBufferAllocator.h"
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceGarbageCollector.h"
@@ -33,6 +34,8 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
+  ConstantBufferAllocator m_constantBufferAllocator;
+
   // Per-window data.
   WindowTarget m_window;
 
@@ -54,16 +57,11 @@ class DXApp {
   Animation m_objectRotationAnimation;
 
   PinholeCamera m_camera;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerFrame;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_constantBufferPerObject;
 
   // TODO: Shadow maps aren't really "app" data, but there isn't really a better place to put it
-  // right now. Ideally, we would be able to dynamically allocate these constant buffers instead
-  // (and that's true of the constant buffers in the color pass as well).
+  // right now.
   ShadowMap m_shadowMap;
   OrthographicCamera m_shadowMapCamera;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_shadowMapPassConstantBufferPerFrame;
-  Microsoft::WRL::ComPtr<ID3D12Resource> m_shadowMapPassConstantBufferPerObject;
 
  public:
   void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, std::string filename);

@@ -9,6 +9,8 @@ executable("d3d12_renderer") {
     "Camera.cpp",
     "Camera.h",
     "comhelper.h",
+    "ConstantBufferAllocator.cpp",
+    "ConstantBufferAllocator.h",
     "d3dx12.h",
     "DXApp.cpp",
     "DXApp.h",

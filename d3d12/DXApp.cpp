@@ -93,6 +93,8 @@ void DXApp::InitializePerDeviceObjects() {
                                  /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
 
   // Keeping m_cl open so that default-heap resources can be initialized.
+
+  m_constantBufferAllocator.Initialize(m_device.Get());
 }
 
 void DXApp::InitializePerWindowObjects(HWND hwnd) {
@@ -118,12 +120,6 @@ void DXApp::InitializeShadowMapObjects() {
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
   m_shadowMapCamera.width = 1.5;
   m_shadowMapCamera.height = 1.5;
-
-  // Initialize the constant buffers.
-  m_shadowMapPassConstantBufferPerFrame =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
-  m_shadowMapPassConstantBufferPerObject =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4));
 }
 
 void DXApp::InitializeAppObjects(const std::string& objFilename) {
@@ -149,12 +145,6 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
 
   m_camera.position_ = DirectX::XMFLOAT4(1.25, 0.25, 1.25, 1.f);
   m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-
-  // Initialize the constant buffers.
-  m_constantBufferPerFrame =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4) * 2);
-  m_constantBufferPerObject =
-      ResourceHelper::AllocateBuffer(m_device.Get(), sizeof(DirectX::XMFLOAT4X4) * 2);
 }
 
 void DXApp::HandleResizeIfNecessary() {
@@ -187,16 +177,18 @@ void DXApp::DrawScene() {
   // Set up the constant buffer for the per-frame data.
   DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 =
       m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
-  ResourceHelper::UpdateBuffer(m_shadowMapPassConstantBufferPerFrame.Get(),
-                               &shadowMapViewPerspective4x4, sizeof(shadowMapViewPerspective4x4));
-  m_cl->SetGraphicsRootConstantBufferView(
-      0, m_shadowMapPassConstantBufferPerFrame->GetGPUVirtualAddress());
+  D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerFrameConstantBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(shadowMapViewPerspective4x4),
+                                                  &shadowMapViewPerspective4x4, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
+                                          shadowMapPerFrameConstantBuffer);
 
   // Set up the constant buffer for the per-object data.
-  ResourceHelper::UpdateBuffer(m_shadowMapPassConstantBufferPerObject.Get(), &modelTransform4x4,
-                               sizeof(modelTransform4x4));
-  m_cl->SetGraphicsRootConstantBufferView(
-      1, m_shadowMapPassConstantBufferPerObject->GetGPUVirtualAddress());
+  D3D12_GPU_VIRTUAL_ADDRESS shadowMapModelTransformConstantBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4,
+                                                  m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1,
+                                          shadowMapModelTransformConstantBuffer);
 
   CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -243,14 +235,17 @@ void DXApp::DrawScene() {
   DirectX::XMFLOAT4X4 viewPerspective4x4[2] = {
       m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio()),
       shadowMapViewPerspective4x4};
-  ResourceHelper::UpdateBuffer(m_constantBufferPerFrame.Get(), &viewPerspective4x4,
-                               sizeof(viewPerspective4x4));
-  m_cl->SetGraphicsRootConstantBufferView(0, m_constantBufferPerFrame->GetGPUVirtualAddress());
+  D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(viewPerspective4x4), viewPerspective4x4,
+                                                  m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
+                                          colorPassPerFrameConstantBuffer);
 
   DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
   DirectX::XMMATRIX modelTransformModified = modelTransform;
   modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
-  DirectX::XMMATRIX modelTransformInverseTranspose = DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
+  DirectX::XMMATRIX modelTransformInverseTranspose =
+      DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
 
   DirectX::XMFLOAT4X4 transforms4x4[2];
   DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
@@ -258,9 +253,11 @@ void DXApp::DrawScene() {
   DirectX::XMStoreFloat4x4(&transforms4x4[1], modelTransformInverseTranspose);
 
   // Set up the constant buffer for the per-object data.
-  ResourceHelper::UpdateBuffer(m_constantBufferPerObject.Get(), &transforms4x4,
-                               sizeof(DirectX::XMFLOAT4X4) * 2);
-  m_cl->SetGraphicsRootConstantBufferView(1, m_constantBufferPerObject->GetGPUVirtualAddress());
+  D3D12_GPU_VIRTUAL_ADDRESS colorPassModelTransformsConstantBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(transforms4x4), transforms4x4,
+                                                  m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1,
+                                          colorPassModelTransformsConstantBuffer);
 
   unsigned int width = m_window.GetWidth();
   unsigned int height = m_window.GetHeight();
@@ -317,6 +314,7 @@ void DXApp::SignalAndPresent() {
 void DXApp::WaitForNextFrame() {
   m_window.WaitForNextFrame();
   m_garbageCollector.Cleanup(m_fence->GetCompletedValue());
+  m_constantBufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {
@@ -330,6 +328,7 @@ void DXApp::FlushGPUWork() {
   }
 
   m_garbageCollector.Cleanup(m_fence->GetCompletedValue());
+  m_constantBufferAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 bool DXApp::HandleMessages() {

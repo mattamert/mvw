@@ -10,9 +10,6 @@ using namespace Microsoft::WRL;
 Microsoft::WRL::ComPtr<ID3D12Resource> ResourceHelper::AllocateBuffer(
     ID3D12Device* device,
     unsigned int bytesToAllocate) {
-  // TODO: We could probably save some space if we do some smart alignment here.
-  //       Constant buffers are likely not to use the full 64kB aligned. We should be able to reduce
-  //       the alignment to 256.
   D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bytesToAllocate);
   ComPtr<ID3D12Resource> buffer;
