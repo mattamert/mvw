@@ -22,6 +22,12 @@ Microsoft::WRL::ComPtr<ID3D12Resource> AllocatePage(ID3D12Device* device) {
 }
 }  // namespace
 
+
+ConstantBufferAllocator::InFlightPage::InFlightPage(
+    Microsoft::WRL::ComPtr<ID3D12Resource> bufferInFlight,
+    size_t signalValueOfBuffer)
+    : buffer(std::move(bufferInFlight)), signalValue(signalValueOfBuffer) {}
+
 void ConstantBufferAllocator::Initialize(ID3D12Device* device) {
   m_device = device;
 }
@@ -41,10 +47,7 @@ D3D12_GPU_VIRTUAL_ADDRESS ConstantBufferAllocator::AllocateAndUpload(
     m_currentMappedAddress = nullptr;
     m_currentBuffer->Unmap(0, /*writtenRange*/ nullptr);
 
-    InFlightPage inFlightPage;
-    inFlightPage.buffer = std::move(m_currentBuffer);
-    inFlightPage.signalValue = m_currentBufferSignalValue;
-    m_inFlightPages.emplace_back(std::move(inFlightPage));
+    m_inFlightPages.emplace(std::move(m_currentBuffer), m_currentBufferSignalValue);
 
     m_currentBufferSignalValue = nextSignalValue;
     m_currentBufferOffset = 0;
@@ -78,12 +81,10 @@ void ConstantBufferAllocator::Cleanup(uint64_t currentSignalValue) {
   // Erase all of the pages that have a signal value that is less than or equal to the current
   // signal value. This will call their destructors and subsequently deallocate their gpu
   // allocation.
+  // TODO: As mentioned in the header file, we should instead maintain a list of free buffers
+  //       rather than just deallocating them after use. This would mean there'd be a lot
+  //       less allocation & deallocation every frame.
 
-  auto firstPageStillInFlightIter = m_inFlightPages.cbegin();
-  while (firstPageStillInFlightIter != m_inFlightPages.cend() &&
-         firstPageStillInFlightIter->signalValue <= currentSignalValue) {
-    firstPageStillInFlightIter++;
-  }
-
-  m_inFlightPages.erase(m_inFlightPages.cbegin(), firstPageStillInFlightIter);
+  while (m_inFlightPages.size() > 0 && m_inFlightPages.front().signalValue <= currentSignalValue)
+    m_inFlightPages.pop();
 }

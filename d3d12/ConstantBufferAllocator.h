@@ -1,7 +1,7 @@
 #include <d3d12.h>
 #include <wrl/client.h>  // For ComPtr
 
-#include <vector>
+#include <queue>
 
 class ConstantBufferAllocator {
  private:
@@ -15,8 +15,9 @@ class ConstantBufferAllocator {
   struct InFlightPage {
     Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
     size_t signalValue;
+    InFlightPage(Microsoft::WRL::ComPtr<ID3D12Resource> buffer, size_t signalValue);
   };
-  std::vector<InFlightPage> m_inFlightPages;
+  std::queue<InFlightPage> m_inFlightPages;
 
   // TODO: Instead of just deallocating pages that are now no longer InFlight, we could put them in
   // a free list and use them the next time we need to allocate a page. That would save us from
