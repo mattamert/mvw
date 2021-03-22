@@ -112,6 +112,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClCompile Include="..\..\d3d12\Animation.cpp" />
     <ClCompile Include="..\..\d3d12\Camera.cpp" />
     <ClCompile Include="..\..\d3d12\ConstantBufferAllocator.cpp" />
+    <ClCompile Include="..\..\d3d12\DescriptorHeapManagers.cpp" />
     <ClCompile Include="..\..\d3d12\ImageLoader.cpp" />
     <ClCompile Include="..\..\d3d12\Object.cpp" />
     <ClCompile Include="..\..\d3d12\ObjFileLoader.cpp" />
@@ -131,6 +132,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\Animation.h" />
     <ClInclude Include="..\..\d3d12\Camera.h" />
     <ClInclude Include="..\..\d3d12\ConstantBufferAllocator.h" />
+    <ClInclude Include="..\..\d3d12\DescriptorHeapManagers.h" />
     <ClInclude Include="..\..\d3d12\ImageLoader.h" />
     <ClInclude Include="..\..\d3d12\Object.h" />
     <ClInclude Include="..\..\d3d12\ObjFileLoader.h" />

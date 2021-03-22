@@ -12,6 +12,8 @@ executable("d3d12_renderer") {
     "ConstantBufferAllocator.cpp",
     "ConstantBufferAllocator.h",
     "d3dx12.h",
+    "DescriptorHeapManagers.cpp",
+    "DescriptorHeapManagers.h",
     "DXApp.cpp",
     "DXApp.h",
     "ImageLoader.cpp",
