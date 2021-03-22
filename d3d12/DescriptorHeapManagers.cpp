@@ -99,9 +99,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE CircularBufferDescriptorAllocator::AllocateSingleDes
     m_currentAllocation->numDescriptors = 0;
   }
 
+  CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptor(m_heapStart, m_firstFreeIndex, m_descriptorIncrementSize);
   m_currentAllocation->numDescriptors++;
   m_firstFreeIndex = (m_firstFreeIndex + 1) % m_heapSize;
   --m_numFreeDescriptors;
+
+  return allocatedDescriptor;
 }
 
 void CircularBufferDescriptorAllocator::Cleanup(size_t signalValue) {
