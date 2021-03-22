@@ -1,7 +1,7 @@
 #include "DescriptorHeapManagers.h"
 
-#include "comhelper.h"
-#include "d3dx12.h"
+#include "d3d12/comhelper.h"
+#include "d3d12/d3dx12.h"
 
 #include <assert.h>
 
@@ -73,6 +73,10 @@ void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
   m_numFreeDescriptors = m_heapSize;
 
   m_heapStart = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+
+ID3D12DescriptorHeap* CircularBufferDescriptorAllocator::GetDescriptorHeap() {
+  return m_descriptorHeap.Get();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE CircularBufferDescriptorAllocator::AllocateSingleDescriptor(

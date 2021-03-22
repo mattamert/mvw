@@ -76,6 +76,7 @@ class CircularBufferDescriptorAllocator {
 
  public:
   void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
+  ID3D12DescriptorHeap* GetDescriptorHeap();
 
   D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor(size_t nextSignalValue);
   void Cleanup(size_t signalValue);
