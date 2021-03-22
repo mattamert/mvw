@@ -1,7 +1,8 @@
 #pragma once
 
 #include <d3d12.h>
-#include <vector>
+#include <optional>
+#include <queue>
 #include <wrl/client.h>  // For ComPtr
 
 // The strategy for managing descriptors:
@@ -31,29 +32,51 @@
 // These are not-shader-visible descriptors.
 class LinearDescriptorAllocator {
 private:
-  ID3D12Device* m_device;
+  ID3D12Device* m_device = nullptr;
 
   // TODO:
   //   1) Manage multiple heaps to allow for dynamic allocation
   //   2) Maintain free-list of descriptors
   //      2a) We'll therefore have to return some kind of thread-safe handle that can free the
   //          allocation when necessary.
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap;
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap = nullptr;
   D3D12_DESCRIPTOR_HEAP_TYPE m_heapType;
   D3D12_CPU_DESCRIPTOR_HANDLE m_heapStart;
+  unsigned int m_descriptorIncrementSize;
 
   size_t m_currentHeapSize;
   size_t m_currentIndex;
-  unsigned int m_descriptorIncrementSize;
 
 public:
-  LinearDescriptorAllocator();
   void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
 
   D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor();
 };
 
-//class CircularBufferDescriptorAllocator {
-//public:
-//
-//};
+class CircularBufferDescriptorAllocator {
+ private:
+  ID3D12Device* m_device = nullptr;
+
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap = nullptr;
+  D3D12_DESCRIPTOR_HEAP_TYPE m_heapType;
+  D3D12_CPU_DESCRIPTOR_HANDLE m_heapStart;
+  unsigned int m_descriptorIncrementSize;
+
+  size_t m_heapSize;
+  size_t m_firstFreeIndex;
+  size_t m_numFreeDescriptors;
+
+  struct InFlightDescriptorRange {
+    size_t startIndex;
+    size_t numDescriptors;
+    size_t signalValue;
+  };
+  std::optional<InFlightDescriptorRange> m_currentAllocation = std::nullopt;
+  std::queue<InFlightDescriptorRange> m_inFlightDescriptorRanges;
+
+ public:
+  void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
+
+  D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor(size_t nextSignalValue);
+  void Cleanup(size_t signalValue);
+};
