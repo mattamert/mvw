@@ -6,7 +6,7 @@
 #include <assert.h>
 
 namespace {
-// Arbitrary numbers. Likely needs tuning.
+// Arbitrary numbers. Needs tuning!
 constexpr unsigned int c_linearDescriptorHeapSize = 100;
 constexpr unsigned int c_circularBufferDescriptorHeapSize = 100;
 }  // namespace
@@ -41,19 +41,6 @@ D3D12_CPU_DESCRIPTOR_HANDLE LinearDescriptorAllocator::AllocateSingleDescriptor(
   return allocatedDescriptor;
 }
 
-/*
-  ID3D12Device* m_device = nullptr;
-
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap = nullptr;
-  D3D12_DESCRIPTOR_HEAP_TYPE m_heapType;
-  D3D12_CPU_DESCRIPTOR_HANDLE m_heapStart;
-  unsigned int m_descriptorIncrementSize;
-
-  size_t m_heapSize;
-  size_t m_firstFreeIndex;
-  size_t m_lastFreeIndex;
-*/
-
 void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
                                                    D3D12_DESCRIPTOR_HEAP_TYPE type) {
   m_device = device;
@@ -63,7 +50,7 @@ void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
   // Allocate new heap.
   D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
   heapDesc.Type = m_heapType;
-  heapDesc.NumDescriptors = 100;
+  heapDesc.NumDescriptors = c_circularBufferDescriptorHeapSize;
   heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
   heapDesc.NodeMask = 0;
   HR(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
@@ -72,18 +59,19 @@ void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
   m_firstFreeIndex = 0;
   m_numFreeDescriptors = m_heapSize;
 
-  m_heapStart = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+  m_heapStartCPU = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+  m_heapStartGPU = m_descriptorHeap->GetGPUDescriptorHandleForHeapStart();
 }
 
 ID3D12DescriptorHeap* CircularBufferDescriptorAllocator::GetDescriptorHeap() {
   return m_descriptorHeap.Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE CircularBufferDescriptorAllocator::AllocateSingleDescriptor(
+DescriptorAllocation CircularBufferDescriptorAllocator::AllocateSingleDescriptor(
     size_t nextSignalValue) {
   assert(m_numFreeDescriptors > 0);
   if (m_currentAllocation.has_value()) {
-    // Assert that the signal value is monotomically increasing.
+    // Assume that the signal value is monotomically increasing.
     assert(m_currentAllocation->signalValue <= nextSignalValue);
   }
 
@@ -99,12 +87,13 @@ D3D12_CPU_DESCRIPTOR_HANDLE CircularBufferDescriptorAllocator::AllocateSingleDes
     m_currentAllocation->numDescriptors = 0;
   }
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptor(m_heapStart, m_firstFreeIndex, m_descriptorIncrementSize);
+  CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptorCPU(m_heapStartCPU, m_firstFreeIndex, m_descriptorIncrementSize);
+  CD3DX12_GPU_DESCRIPTOR_HANDLE allocatedDescriptorGPU(m_heapStartGPU, m_firstFreeIndex, m_descriptorIncrementSize);
   m_currentAllocation->numDescriptors++;
   m_firstFreeIndex = (m_firstFreeIndex + 1) % m_heapSize;
   --m_numFreeDescriptors;
 
-  return allocatedDescriptor;
+  return DescriptorAllocation{allocatedDescriptorCPU, allocatedDescriptorGPU, 1ull};
 }
 
 void CircularBufferDescriptorAllocator::Cleanup(size_t signalValue) {

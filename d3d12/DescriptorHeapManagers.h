@@ -53,13 +53,21 @@ public:
   D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor();
 };
 
+
+struct DescriptorAllocation {
+  D3D12_CPU_DESCRIPTOR_HANDLE cpuStart;
+  D3D12_GPU_DESCRIPTOR_HANDLE gpuStart;
+  size_t numDescriptors;
+};
+
 class CircularBufferDescriptorAllocator {
  private:
   ID3D12Device* m_device = nullptr;
 
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap = nullptr;
   D3D12_DESCRIPTOR_HEAP_TYPE m_heapType;
-  D3D12_CPU_DESCRIPTOR_HANDLE m_heapStart;
+  D3D12_CPU_DESCRIPTOR_HANDLE m_heapStartCPU;
+  D3D12_GPU_DESCRIPTOR_HANDLE m_heapStartGPU;
   unsigned int m_descriptorIncrementSize;
 
   size_t m_heapSize;
@@ -78,6 +86,8 @@ class CircularBufferDescriptorAllocator {
   void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
   ID3D12DescriptorHeap* GetDescriptorHeap();
 
-  D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor(size_t nextSignalValue);
+  // TODO: This also needs to return the GPU descriptor for SetGraphicsRootDescriptorTable.
+  DescriptorAllocation AllocateSingleDescriptor(size_t nextSignalValue);
+  //DescriptorAllocation AllocateDescriptorRange(size_t nextSignalValue, size_t numDescriptors); // TODO.
   void Cleanup(size_t signalValue);
 };
