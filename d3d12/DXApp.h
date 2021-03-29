@@ -11,6 +11,7 @@
 #include "d3d12/Animation.h"
 #include "d3d12/Camera.h"
 #include "d3d12/ConstantBufferAllocator.h"
+#include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceGarbageCollector.h"
@@ -35,6 +36,8 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
 
   ConstantBufferAllocator m_constantBufferAllocator;
+  LinearDescriptorAllocator m_linearSRVDescriptorAllocator;
+  CircularBufferDescriptorAllocator m_circularSRVDescriptorAllocator;
 
   // Per-window data.
   WindowTarget m_window;

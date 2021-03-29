@@ -3,7 +3,10 @@
 #include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
 
-void ShadowMap::Initialize(ID3D12Device* device, unsigned int width, unsigned int height) {
+void ShadowMap::Initialize(ID3D12Device* device,
+                           LinearDescriptorAllocator& srvDescriptorAllocator,
+                           unsigned int width,
+                           unsigned int height) {
   m_width = width;
   m_height = height;
 
@@ -38,21 +41,7 @@ void ShadowMap::Initialize(ID3D12Device* device, unsigned int width, unsigned in
   device->CreateDepthStencilView(m_depthTarget.Get(), &dsvDesc, dsvDescriptorHandle);
   m_dsvDescriptorHandle = dsvDescriptorHandle;
 
-
-  D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc;
-  srvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  srvDescriptorHeapDesc.NumDescriptors = 1;
-  srvDescriptorHeapDesc.NodeMask = 0;
-  HR(device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
-  size_t incrementSize =
-    device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-  CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(
-    m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-  CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(
-    m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
+  // Create SRV.
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
   srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
   srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -62,8 +51,8 @@ void ShadowMap::Initialize(ID3D12Device* device, unsigned int width, unsigned in
   srvDesc.Texture2D.PlaneSlice = 0;
   srvDesc.Texture2D.ResourceMinLODClamp = 0;
 
-  device->CreateShaderResourceView(m_depthTarget.Get(), &srvDesc, cpuHandle);
-  m_srvDescriptorHandle = gpuHandle;
+  m_srvDescriptor = srvDescriptorAllocator.AllocateSingleDescriptor();
+  device->CreateShaderResourceView(m_depthTarget.Get(), &srvDesc, m_srvDescriptor.cpuStart);
 }
 
 ID3D12Resource* ShadowMap::GetShadowMap() {
@@ -82,10 +71,6 @@ unsigned int ShadowMap::GetHeight() const {
   return m_height;
 }
 
-ID3D12DescriptorHeap* ShadowMap::GetSRVHeap() {
-  return m_srvDescriptorHeap.Get();
-}
-
-D3D12_GPU_DESCRIPTOR_HANDLE ShadowMap::GetSRVDescriptorHandle() const {
-  return m_srvDescriptorHandle;
+D3D12_CPU_DESCRIPTOR_HANDLE ShadowMap::GetSRVDescriptorHandle() const {
+  return m_srvDescriptor.cpuStart;
 }

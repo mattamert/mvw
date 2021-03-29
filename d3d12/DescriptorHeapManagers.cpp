@@ -17,7 +17,7 @@ void LinearDescriptorAllocator::Initialize(ID3D12Device* device, D3D12_DESCRIPTO
   m_descriptorIncrementSize = m_device->GetDescriptorHandleIncrementSize(type);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE LinearDescriptorAllocator::AllocateSingleDescriptor() {
+DescriptorAllocation LinearDescriptorAllocator::AllocateSingleDescriptor() {
   assert(m_device);
   assert(m_descriptorIncrementSize > 0u);
 
@@ -36,9 +36,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE LinearDescriptorAllocator::AllocateSingleDescriptor(
     m_heapStart = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
   }
 
-  CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptor(m_heapStart, m_currentIndex, m_descriptorIncrementSize);
+  size_t allocatedIndex = m_currentIndex;
+  CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptorCPU(m_heapStart, allocatedIndex, m_descriptorIncrementSize);
+  CD3DX12_GPU_DESCRIPTOR_HANDLE allocatedDescriptorGPU(D3D12_DEFAULT);
   m_currentIndex++;
-  return allocatedDescriptor;
+  return DescriptorAllocation{allocatedDescriptorCPU, allocatedDescriptorGPU, 1ull, allocatedIndex};
 }
 
 void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
@@ -87,13 +89,14 @@ DescriptorAllocation CircularBufferDescriptorAllocator::AllocateSingleDescriptor
     m_currentAllocation->numDescriptors = 0;
   }
 
+  size_t allocatedIndex = m_firstFreeIndex;
   CD3DX12_CPU_DESCRIPTOR_HANDLE allocatedDescriptorCPU(m_heapStartCPU, m_firstFreeIndex, m_descriptorIncrementSize);
   CD3DX12_GPU_DESCRIPTOR_HANDLE allocatedDescriptorGPU(m_heapStartGPU, m_firstFreeIndex, m_descriptorIncrementSize);
   m_currentAllocation->numDescriptors++;
   m_firstFreeIndex = (m_firstFreeIndex + 1) % m_heapSize;
   --m_numFreeDescriptors;
 
-  return DescriptorAllocation{allocatedDescriptorCPU, allocatedDescriptorGPU, 1ull};
+  return DescriptorAllocation{allocatedDescriptorCPU, allocatedDescriptorGPU, 1ull, allocatedIndex};
 }
 
 void CircularBufferDescriptorAllocator::Cleanup(size_t signalValue) {

@@ -21,6 +21,7 @@ using namespace Microsoft::WRL;
 // TODO: This function is gigantic. Needs to be split up / simplified.
 void Model::Init(ID3D12Device* device,
                  ID3D12GraphicsCommandList* cl,
+                 LinearDescriptorAllocator& descriptorAllocator,
                  ResourceGarbageCollector& garbageCollector,
                  uint64_t nextSignalValue,
                  const std::vector<ObjData::Vertex>& vertices,
@@ -52,23 +53,6 @@ void Model::Init(ID3D12Device* device,
   barriers.reserve(1 + 2 * objGroups.size());
   barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
       m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-
-  // TODO: We may not need all of these descriptors, but just for now, let's just over-allocate and
-  // worry about cleaning it up later.
-  D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc;
-  srvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-  srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  srvDescriptorHeapDesc.NumDescriptors = objGroups.size();
-  srvDescriptorHeapDesc.NodeMask = 0;
-  HR(device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
-  size_t incrementSize =
-      device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  m_srvDescriptorIncrement = incrementSize;
-
-  CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(
-      m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-  CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(
-      m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
   // Upload the ObjFile groups.
   m_groups.resize(objGroups.size());
@@ -143,11 +127,10 @@ void Model::Init(ID3D12Device* device,
         srvDesc.Texture2D.MostDetailedMip = 0;
         srvDesc.Texture2D.PlaneSlice = 0;
         srvDesc.Texture2D.ResourceMinLODClamp = 0;
-        device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc, cpuHandle);
-        modelGroup.m_srvDescriptorHandle = gpuHandle;
 
-        cpuHandle.Offset(incrementSize);
-        gpuHandle.Offset(incrementSize);
+        modelGroup.m_srvDescriptor = descriptorAllocator.AllocateSingleDescriptor();
+        device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc,
+                                         modelGroup.m_srvDescriptor.cpuStart);
       }
     }
   }
@@ -157,6 +140,7 @@ void Model::Init(ID3D12Device* device,
 
 void Model::InitCube(ID3D12Device* device,
                      ID3D12GraphicsCommandList* cl,
+                     LinearDescriptorAllocator& descriptorAllocator,
                      ResourceGarbageCollector& garbageCollector,
                      uint64_t nextSignalValue) {
   std::vector<ObjData::Vertex> vertices = {
@@ -224,11 +208,13 @@ void Model::InitCube(ID3D12Device* device,
   std::vector<ObjData::Material> materials;
 
   // TODO: Generate generic material.
-  Init(device, cl, garbageCollector, nextSignalValue, vertices, group, materials);
+  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, vertices, group,
+       materials);
 }
 
 bool Model::InitFromObjFile(ID3D12Device* device,
                             ID3D12GraphicsCommandList* cl,
+                            LinearDescriptorAllocator& descriptorAllocator,
                             ResourceGarbageCollector& garbageCollector,
                             uint64_t nextSignalValue,
                             const std::string& fileName) {
@@ -238,8 +224,8 @@ bool Model::InitFromObjFile(ID3D12Device* device,
   }
 
   m_bounds = data.m_bounds;
-  Init(device, cl, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups,
-       data.m_materials);
+  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, data.m_vertices,
+       data.m_groups, data.m_materials);
 
   return true;
 }
@@ -253,10 +239,6 @@ const ObjData::AxisAlignedBounds& Model::GetBounds() const {
   return m_bounds;
 }
 
-ID3D12DescriptorHeap* Model::GetSRVDescriptorHeap() {
-  return m_srvDescriptorHeap.Get();
-}
-
 size_t Model::GetNumberOfGroups() {
   return m_groups.size();
 }
@@ -265,8 +247,8 @@ D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView(size_t groupIndex) {
   return m_groups[groupIndex].m_indexBufferView;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Model::GetTextureDescriptorHandle(size_t groupIndex) {
-  return m_groups[groupIndex].m_srvDescriptorHandle;
+D3D12_CPU_DESCRIPTOR_HANDLE Model::GetTextureDescriptorHandle(size_t groupIndex) {
+  return m_groups[groupIndex].m_srvDescriptor.cpuStart;
 }
 
 size_t Model::GetNumIndices(size_t groupIndex) {

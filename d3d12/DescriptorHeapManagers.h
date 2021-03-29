@@ -20,6 +20,12 @@
 // performance on some GPUs, as changing the bound heap can be expensive.
 // 
 
+struct DescriptorAllocation {
+  D3D12_CPU_DESCRIPTOR_HANDLE cpuStart;
+  D3D12_GPU_DESCRIPTOR_HANDLE gpuStart;
+  size_t numDescriptors;
+  size_t indexInHeap;
+};
 
 // This class is used to allocate descriptors, well, linearly. The idea is that you allocate all of
 // the descriptors in one of these objects. Then, when you need to access it through a shader,
@@ -50,14 +56,7 @@ private:
 public:
   void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
 
-  D3D12_CPU_DESCRIPTOR_HANDLE AllocateSingleDescriptor();
-};
-
-
-struct DescriptorAllocation {
-  D3D12_CPU_DESCRIPTOR_HANDLE cpuStart;
-  D3D12_GPU_DESCRIPTOR_HANDLE gpuStart;
-  size_t numDescriptors;
+  DescriptorAllocation AllocateSingleDescriptor();
 };
 
 class CircularBufferDescriptorAllocator {

@@ -95,6 +95,8 @@ void DXApp::InitializePerDeviceObjects() {
   // Keeping m_cl open so that default-heap resources can be initialized.
 
   m_constantBufferAllocator.Initialize(m_device.Get());
+  m_linearSRVDescriptorAllocator.Initialize(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  m_circularSRVDescriptorAllocator.Initialize(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 void DXApp::InitializePerWindowObjects(HWND hwnd) {
@@ -114,7 +116,7 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeShadowMapObjects() {
-  m_shadowMap.Initialize(m_device.Get(), 2000, 2000);
+  m_shadowMap.Initialize(m_device.Get(), m_linearSRVDescriptorAllocator, 2000, 2000);
 
   m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -124,8 +126,8 @@ void DXApp::InitializeShadowMapObjects() {
 
 void DXApp::InitializeAppObjects(const std::string& objFilename) {
   Model model;
-  model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_garbageCollector, m_nextFenceValue,
-                        objFilename);
+  model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_linearSRVDescriptorAllocator,
+                        m_garbageCollector, m_nextFenceValue, objFilename);
 
   const ObjData::AxisAlignedBounds& bounds = model.GetBounds();
   float width = std::abs(bounds.max[0] - bounds.min[0]);
@@ -279,17 +281,27 @@ void DXApp::DrawScene() {
 
   m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
 
-  // TODO: Binding descriptor heaps multiple times per frame is apparently bad. Should probably work
-  // out how best to handle descriptors.
-  ID3D12DescriptorHeap* shadowMapSRVHeap[] = {m_shadowMap.GetSRVHeap()};
-  m_cl->SetDescriptorHeaps(1, shadowMapSRVHeap);
-  m_cl->SetGraphicsRootDescriptorTable(2, m_shadowMap.GetSRVDescriptorHandle());
+  // Set the descriptor heap.
+  ID3D12DescriptorHeap* circularBufferSRVDescriptorHeap[] = {
+      m_circularSRVDescriptorAllocator.GetDescriptorHeap()};
+  m_cl->SetDescriptorHeaps(1, circularBufferSRVDescriptorHeap);
 
-  ID3D12DescriptorHeap* heaps[] = {m_object.model.GetSRVDescriptorHeap()};
-  m_cl->SetDescriptorHeaps(1, heaps);
+  DescriptorAllocation shadowMapSRVDescriptor =
+      m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+  m_device->CopyDescriptorsSimple(1, shadowMapSRVDescriptor.cpuStart,
+                                  m_shadowMap.GetSRVDescriptorHandle(),
+                                  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
 
   for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
-    m_cl->SetGraphicsRootDescriptorTable(3, m_object.model.GetTextureDescriptorHandle(i));
+    DescriptorAllocation textureSRVDescriptor =
+        m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+    m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart,
+                                    m_object.model.GetTextureDescriptorHandle(i),
+                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
+
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
   }
@@ -315,6 +327,7 @@ void DXApp::WaitForNextFrame() {
   m_window.WaitForNextFrame();
   m_garbageCollector.Cleanup(m_fence->GetCompletedValue());
   m_constantBufferAllocator.Cleanup(m_fence->GetCompletedValue());
+  m_circularSRVDescriptorAllocator.Cleanup(m_fence->GetCompletedValue());
 }
 
 void DXApp::FlushGPUWork() {

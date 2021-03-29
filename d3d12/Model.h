@@ -1,5 +1,6 @@
 #pragma once
 
+#include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/ObjFileLoader.h"
 #include "d3d12/ResourceGarbageCollector.h"
 
@@ -13,7 +14,10 @@ class Model {
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     size_t m_numIndices;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
-    D3D12_GPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
+    D3D12_CPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
+
+    DescriptorAllocation m_srvDescriptor;
+    //D3D12_GPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
     // TODO: Add material stuff.
   };
 
@@ -21,14 +25,15 @@ class Model {
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
   std::vector<Group> m_groups;
 
-  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
-  size_t m_srvDescriptorIncrement;
+  //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
+  //size_t m_srvDescriptorIncrement;
 
   ObjData::AxisAlignedBounds m_bounds;
 
   // TODO: This is a lot of parameters. This function should be slimmed down somehow.
   void Init(ID3D12Device* device,
             ID3D12GraphicsCommandList* cl,
+            LinearDescriptorAllocator& descriptorAllocator,
             ResourceGarbageCollector& garbageCollector,
             uint64_t nextSignalValue,
             const std::vector<ObjData::Vertex>& vertices,
@@ -38,22 +43,24 @@ class Model {
  public:
   void InitCube(ID3D12Device* device,
                 ID3D12GraphicsCommandList* cl,
+                LinearDescriptorAllocator& descriptorAllocator,
                 ResourceGarbageCollector& garbageCollector,
                 uint64_t nextSignalValue);
 
   bool InitFromObjFile(ID3D12Device* device,
                        ID3D12GraphicsCommandList* cl,
+                       LinearDescriptorAllocator& descriptorAllocator,
                        ResourceGarbageCollector& garbageCollector,
                        uint64_t nextSignalValue,
                        const std::string& fileName);
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
   const ObjData::AxisAlignedBounds& GetBounds() const;
-  ID3D12DescriptorHeap* GetSRVDescriptorHeap();
+  //ID3D12DescriptorHeap* GetSRVDescriptorHeap();
 
   // TODO: This is so sloppy, should be cleaned up. idk what to, though.
   size_t GetNumberOfGroups();
   D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView(size_t groupIndex);
-  D3D12_GPU_DESCRIPTOR_HANDLE GetTextureDescriptorHandle(size_t groupIndex);
+  D3D12_CPU_DESCRIPTOR_HANDLE GetTextureDescriptorHandle(size_t groupIndex);
   size_t GetNumIndices(size_t groupIndex);
 };
