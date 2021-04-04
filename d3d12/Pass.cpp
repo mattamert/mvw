@@ -8,8 +8,11 @@
 using namespace Microsoft::WRL;
 
 namespace {
-HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*/ ID3DBlob** blob) {
-  if (!srcFile || !entryPoint || !profile || !blob)
+HRESULT CompileShader(LPCWSTR srcFile,
+                      LPCSTR entryPoint,
+                      LPCSTR profile,
+                      /*out*/ Microsoft::WRL::ComPtr<ID3DBlob>& blob) {
+  if (!srcFile || !entryPoint || !profile)
     return E_INVALIDARG;
 
   UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -17,20 +20,18 @@ HRESULT CompileShader(LPCWSTR srcFile, LPCSTR entryPoint, LPCSTR profile, /*out*
   flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
   
-  ID3DBlob* shaderBlob = nullptr;
-  ID3DBlob* errorBlob = nullptr;
+  Microsoft::WRL::ComPtr<ID3DBlob> shaderBlob = nullptr;
+  Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
   HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint,
                                   profile, flags, 0, &shaderBlob, &errorBlob);
   if (FAILED(hr)) {
     if (errorBlob) {
       OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-      errorBlob->Release();
     }
-    SafeRelease(&shaderBlob);
     return hr;
   }
 
-  *blob = shaderBlob;
+  blob = std::move(shaderBlob);
   return hr;
 }
 }  // namespace
@@ -85,8 +86,8 @@ void ColorPass::Initialize(ID3D12Device* device) {
                                  rootSignatureBlob->GetBufferSize(),
                                  IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
+  HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", /*out*/m_vertexShader));
+  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", /*out*/m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -156,8 +157,8 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
     rootSignatureBlob->GetBufferSize(),
     IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"ShadowMapShaders.hlsl", "VSMain", "vs_5_0", &m_vertexShader));
-  HR(CompileShader(L"ShadowMapShaders.hlsl", "PSMain", "ps_5_0", &m_pixelShader));
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "VSMain", "vs_5_0", /*out*/m_vertexShader));
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "PSMain", "ps_5_0", /*out*/m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
