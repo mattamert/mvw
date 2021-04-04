@@ -17,16 +17,12 @@ class Model {
     D3D12_CPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
 
     DescriptorAllocation m_srvDescriptor;
-    //D3D12_GPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
     // TODO: Add material stuff.
   };
 
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
   std::vector<Group> m_groups;
-
-  //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap;
-  //size_t m_srvDescriptorIncrement;
 
   ObjData::AxisAlignedBounds m_bounds;
 
