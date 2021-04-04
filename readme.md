@@ -11,6 +11,7 @@ This project uses:
   - clang for the compiler
   - MSVC/Visual Studio for the system libraries.
 
+To Build:
 1. Download/Install: gn, ninja, clang, and visual studio.
 2. Clone the repo with --recurse-submodules
 3. cd into the repo and run: "gn gen out/x64_Debug" (only x64 is supported right now)
