@@ -17,4 +17,4 @@ To Build:
 3. cd into the repo and run: "gn gen out/x64_Debug" (only x64 is supported right now)
 4. Build it with either of the following ways:
     - Open the solution file with Visual Studio & run it.
-    - Alternatively, cd into the out/x64_Debug directory and run "ninja all".
+    - Run the vcvars64.bat included in your Visual Studio installation (an example of where to find it can be found in build/myvcvars19.bat). Then, cd into the out/x64_Debug directory and run "ninja all".
