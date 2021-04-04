@@ -86,6 +86,9 @@ class DXApp {
   void InitializeShadowMapObjects();
   void InitializeAppObjects(const std::string& objFilename);
 
+  void RunShadowPass();
+  void RunColorPass();
+
   void FlushGPUWork();
   void WaitForNextFrame();
 };

@@ -165,42 +165,50 @@ void DXApp::DrawScene() {
   // Update animation.
   double progress = Animation::TickAnimation(m_objectRotationAnimation);
   m_object.rotationY = progress * 2 * 3.14159265;
-  //m_object.rotationY = 0;
 
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
-  DirectX::XMFLOAT4X4 modelTransform4x4 = m_object.GenerateModelTransform4x4();
+  RunShadowPass();
+  RunColorPass();
 
-  // ------------- Shadow Map Pass --------------
+  m_cl->Close();
+  ID3D12CommandList* cl[] = {m_cl.Get()};
+  m_directCommandQueue->ExecuteCommandLists(1, cl);
+}
+
+// Expects that the shadow map resource is in D3D12_RESOURCE_STATE_GENERIC_READ.
+// Will transition the shadow map resource back to GENERIC_READ when done.
+void DXApp::RunShadowPass() {
   m_cl->SetPipelineState(m_shadowMapPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
   DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 =
-      m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+    m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
   D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerFrameConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(shadowMapViewPerspective4x4),
-                                                  &shadowMapViewPerspective4x4, m_nextFenceValue);
+    m_constantBufferAllocator.AllocateAndUpload(sizeof(shadowMapViewPerspective4x4),
+      &shadowMapViewPerspective4x4, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
-                                          shadowMapPerFrameConstantBuffer);
+    shadowMapPerFrameConstantBuffer);
 
   // Set up the constant buffer for the per-object data.
+  DirectX::XMFLOAT4X4 modelTransform4x4 = m_object.GenerateModelTransform4x4();
   D3D12_GPU_VIRTUAL_ADDRESS shadowMapModelTransformConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4,
-                                                  m_nextFenceValue);
+    m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4,
+      m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1,
-                                          shadowMapModelTransformConstantBuffer);
+    shadowMapModelTransformConstantBuffer);
 
   CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_GENERIC_READ,
-      D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_GENERIC_READ,
+    D3D12_RESOURCE_STATE_DEPTH_WRITE);
   m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
 
   unsigned int shadowMapWidth = m_shadowMap.GetWidth();
   unsigned int shadowMapHeight = m_shadowMap.GetHeight();
   CD3DX12_VIEWPORT shadowMapClientAreaViewport(0.0f, 0.0f, static_cast<float>(shadowMapWidth),
-                                               static_cast<float>(shadowMapHeight));
+    static_cast<float>(shadowMapHeight));
   CD3DX12_RECT shadowMapScissorRect(0, 0, shadowMapWidth, shadowMapHeight);
   m_cl->RSSetViewports(1, &shadowMapClientAreaViewport);
   m_cl->RSSetScissorRects(1, &shadowMapScissorRect);
@@ -221,11 +229,14 @@ void DXApp::DrawScene() {
   }
 
   shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
-      D3D12_RESOURCE_STATE_GENERIC_READ);
+    m_shadowMap.GetShadowMap(), D3D12_RESOURCE_STATE_DEPTH_WRITE,
+    D3D12_RESOURCE_STATE_GENERIC_READ);
   m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
+}
 
-  // ---------------- Color Pass ----------------
+// Expects taht the back buffer is in D3D12_RESOURCE_STATE_PRESENT.
+// Will transition the back buffer back to D3D12_RESOURCE_STATE_PRESENT when done.
+void DXApp::RunColorPass() {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_window.GetCurrentBackBufferRTVHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_window.GetDepthStencilViewHandle();
@@ -235,20 +246,22 @@ void DXApp::DrawScene() {
 
   // Set up the constant buffer for the per-frame data.
   ColorPass::PerFrameData perFrameData;
-  perFrameData.projectionViewTransform = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
-  perFrameData.shadowMapProjectionViewTransform = shadowMapViewPerspective4x4;
+  perFrameData.projectionViewTransform =
+      m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  perFrameData.shadowMapProjectionViewTransform =
+      m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
   perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData,
                                                   m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
-                                          colorPassPerFrameConstantBuffer);
+    colorPassPerFrameConstantBuffer);
 
   DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
   DirectX::XMMATRIX modelTransformModified = modelTransform;
   modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
   DirectX::XMMATRIX modelTransformInverseTranspose =
-      DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
+    DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
 
   DirectX::XMFLOAT4X4 transforms4x4[2];
   DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
@@ -257,25 +270,25 @@ void DXApp::DrawScene() {
 
   // Set up the constant buffer for the per-object data.
   D3D12_GPU_VIRTUAL_ADDRESS colorPassModelTransformsConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(transforms4x4), transforms4x4,
-                                                  m_nextFenceValue);
+    m_constantBufferAllocator.AllocateAndUpload(sizeof(transforms4x4), transforms4x4,
+      m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1,
-                                          colorPassModelTransformsConstantBuffer);
+    colorPassModelTransformsConstantBuffer);
 
   unsigned int width = m_window.GetWidth();
   unsigned int height = m_window.GetHeight();
   CD3DX12_VIEWPORT clientAreaViewport(0.0f, 0.0f, static_cast<float>(width),
-                                      static_cast<float>(height));
+    static_cast<float>(height));
   CD3DX12_RECT scissorRect(0, 0, width, height);
   m_cl->RSSetViewports(1, &clientAreaViewport);
   m_cl->RSSetScissorRects(1, &scissorRect);
 
   CD3DX12_RESOURCE_BARRIER rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
   m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-  float clearColor[4] = {0.1, 0.2, 0.3, 1.0};
+  float clearColor[4] = { 0.1, 0.2, 0.3, 1.0 };
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -284,23 +297,23 @@ void DXApp::DrawScene() {
 
   // Set the descriptor heap.
   ID3D12DescriptorHeap* circularBufferSRVDescriptorHeap[] = {
-      m_circularSRVDescriptorAllocator.GetDescriptorHeap()};
+      m_circularSRVDescriptorAllocator.GetDescriptorHeap() };
   m_cl->SetDescriptorHeaps(1, circularBufferSRVDescriptorHeap);
 
   DescriptorAllocation shadowMapSRVDescriptor =
-      m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+    m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
   m_device->CopyDescriptorsSimple(1, shadowMapSRVDescriptor.cpuStart,
-                                  m_shadowMap.GetSRVDescriptorHandle(),
-                                  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_shadowMap.GetSRVDescriptorHandle(),
+    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
   m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
 
   for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
     DescriptorAllocation textureSRVDescriptor =
-        m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+      m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
     m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart,
-                                    m_object.model.GetTextureDescriptorHandle(i),
-                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+      m_object.model.GetTextureDescriptorHandle(i),
+      D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
 
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
@@ -308,13 +321,9 @@ void DXApp::DrawScene() {
   }
 
   rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-      backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
   m_cl->ResourceBarrier(1, &rtvResourceBarrier);
-
-  m_cl->Close();
-
-  ID3D12CommandList* cl[] = {m_cl.Get()};
-  m_directCommandQueue->ExecuteCommandLists(1, cl);
 }
 
 void DXApp::SignalAndPresent() {
