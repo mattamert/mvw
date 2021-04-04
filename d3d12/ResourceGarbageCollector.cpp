@@ -10,7 +10,7 @@ void ResourceGarbageCollector::MarkAsGarbage(Microsoft::WRL::ComPtr<ID3D12Resour
   newGarbage.resource = std::move(resource);
   newGarbage.signalValue = signalValue;
 
-  m_garbage.push(std::move(newGarbage));
+  m_garbage.emplace(std::move(newGarbage));
 }
 
 void ResourceGarbageCollector::Cleanup(uint64_t signalValue) {

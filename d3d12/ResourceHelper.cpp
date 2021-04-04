@@ -34,9 +34,9 @@ Microsoft::WRL::ComPtr<ID3D12Resource> ResourceHelper::AllocateIntermediateBuffe
                                      D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                      IID_PPV_ARGS(&intermediateBuffer)));
 
-  garbageCollector.MarkAsGarbage(intermediateBuffer.Get(), nextSignalValue);
+  garbageCollector.MarkAsGarbage(intermediateBuffer, nextSignalValue);
 
-  return intermediateBuffer;
+  return std::move(intermediateBuffer);
 }
 
 void ResourceHelper::UpdateBuffer(ID3D12Resource* buffer, void* newData, size_t dataSize) {
