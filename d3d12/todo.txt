@@ -1,5 +1,0 @@
-1. Descriptor heaps need to be more dynamic in the same vein; right now we allocate everything in separate heaps.
-   We need to find a better way to do this.
-2. The way that we upload models & texture data to the GPU is not clean, and often takes too much memory
-   (I ran out of memory on my surface book trying to load a model with very detailed textures).
-3. Light direction shouldn't be hard-coded in the shader.
