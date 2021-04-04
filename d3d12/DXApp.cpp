@@ -234,7 +234,7 @@ void DXApp::RunShadowPass() {
   m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
 }
 
-// Expects taht the back buffer is in D3D12_RESOURCE_STATE_PRESENT.
+// Expects that the back buffer is in D3D12_RESOURCE_STATE_PRESENT.
 // Will transition the back buffer back to D3D12_RESOURCE_STATE_PRESENT when done.
 void DXApp::RunColorPass() {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
