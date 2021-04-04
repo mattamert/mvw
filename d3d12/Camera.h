@@ -17,8 +17,10 @@ public:
   DirectX::XMMATRIX GenerateViewPerspectiveTransform() const;
   DirectX::XMFLOAT4X4 GenerateViewPerspectiveTransform4x4() const;
 
+  DirectX::XMFLOAT4 GetLightDirection() const;
+
   DirectX::XMFLOAT4 position_;
   DirectX::XMFLOAT4 look_at_;
-  float width;
-  float height;
+  float widthInWorldCoordinates;
+  float heightInWorldCoordinates;
 };

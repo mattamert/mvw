@@ -33,8 +33,8 @@ DirectX::XMMATRIX OrthographicCamera::GenerateViewPerspectiveTransform() const {
   DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
 
   DirectX::XMMATRIX viewMatrix = DirectX::XMMatrixLookAtLH(pos, look_at, up);
-  DirectX::XMMATRIX orthographicMatrix =
-      DirectX::XMMatrixOrthographicLH(this->width, this->height, 0.f, 5.f);
+  DirectX::XMMATRIX orthographicMatrix = DirectX::XMMatrixOrthographicLH(
+      this->widthInWorldCoordinates, this->heightInWorldCoordinates, 0.f, 5.f);
 
   // Future note: DirectXMath uses row-vector matrices and row-major order for the matrices.
   // This means that matrix multplication with the DirectXMath Library should be done as
@@ -52,4 +52,19 @@ DirectX::XMFLOAT4X4 OrthographicCamera::GenerateViewPerspectiveTransform4x4() co
   DirectX::XMMATRIX viewPerspective = GenerateViewPerspectiveTransform();
   DirectX::XMStoreFloat4x4(&viewPerspective4x4, viewPerspective);
   return viewPerspective4x4;
+}
+
+DirectX::XMFLOAT4 OrthographicCamera::GetLightDirection() const {
+  // Don't know if it's faster to do this as opposed to just directly calculating it with XMFLOAT4s,
+  // but like, this way we can claim that we're making full use of SIMD instructions or something.
+  DirectX::XMVECTOR lookAtVector = DirectX::XMLoadFloat4(&look_at_);
+  DirectX::XMVECTOR positionVector = DirectX::XMLoadFloat4(&position_);
+
+  // Technically, the w-component is 0 after the subtraction here, but it shouldn't matter; we never
+  // need the w component for the light direction.
+  DirectX::XMVECTOR lightDirVector = positionVector - lookAtVector;
+
+  DirectX::XMFLOAT4 result;
+  DirectX::XMStoreFloat4(&result, lightDirVector);
+  return result;
 }

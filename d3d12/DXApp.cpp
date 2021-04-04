@@ -120,8 +120,8 @@ void DXApp::InitializeShadowMapObjects() {
 
   m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_shadowMapCamera.width = 1.5;
-  m_shadowMapCamera.height = 1.5;
+  m_shadowMapCamera.widthInWorldCoordinates = 1.5;
+  m_shadowMapCamera.heightInWorldCoordinates = 1.5;
 }
 
 void DXApp::InitializeAppObjects(const std::string& objFilename) {
@@ -157,6 +157,12 @@ void DXApp::HandleResizeIfNecessary() {
     m_window.HandlePendingResize();
   }
 }
+
+struct ColorPassPerFrameData {
+  DirectX::XMFLOAT4X4 projectionViewTransform;
+  DirectX::XMFLOAT4X4 shadowMapProjectionViewTransform;
+  DirectX::XMFLOAT4 lightDirection;
+};
 
 void DXApp::DrawScene() {
   HandleResizeIfNecessary();
@@ -234,11 +240,12 @@ void DXApp::DrawScene() {
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMFLOAT4X4 viewPerspective4x4[2] = {
-      m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio()),
-      shadowMapViewPerspective4x4};
+  ColorPassPerFrameData perFrameData;
+  perFrameData.projectionViewTransform = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  perFrameData.shadowMapProjectionViewTransform = shadowMapViewPerspective4x4;
+  perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(viewPerspective4x4), viewPerspective4x4,
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPassPerFrameData), &perFrameData,
                                                   m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
                                           colorPassPerFrameConstantBuffer);

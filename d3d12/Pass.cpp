@@ -53,9 +53,11 @@ void ColorPass::Initialize(ID3D12Device* device) {
   CD3DX12_DESCRIPTOR_RANGE texTable;
   texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 
+  // CBV 0 is the per-frame data.
+  // CBV 1 is the per-object data.
   CD3DX12_ROOT_PARAMETER parameters[4] = {};
   parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
-                                         D3D12_SHADER_VISIBILITY_VERTEX);
+                                         D3D12_SHADER_VISIBILITY_ALL);
   parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
                                          D3D12_SHADER_VISIBILITY_VERTEX);
   parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &shadowMapTable,

@@ -1,6 +1,7 @@
 cbuffer PerFrameData : register(b0) {
   float4x4 projectionViewTransform;
   float4x4 shadowMapProjectionViewTransform;
+  float4 lightDirection;
 }
 
 cbuffer PerObjectData : register(b1) {
@@ -43,7 +44,7 @@ float4 PSMain(PSInput input) : SV_TARGET{
   }
 
   // TODO: Don't hard-code light direction. Make it a parameter in the PerFrameData buffer.
-  float lambertFactor = dot(normalize(input.normal.xyz), normalize(float3(-1, 1, 1)));
+  float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
 
   float2 shadowMapTexCoord =
       float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
