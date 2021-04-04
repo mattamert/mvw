@@ -158,12 +158,6 @@ void DXApp::HandleResizeIfNecessary() {
   }
 }
 
-struct ColorPassPerFrameData {
-  DirectX::XMFLOAT4X4 projectionViewTransform;
-  DirectX::XMFLOAT4X4 shadowMapProjectionViewTransform;
-  DirectX::XMFLOAT4 lightDirection;
-};
-
 void DXApp::DrawScene() {
   HandleResizeIfNecessary();
   WaitForNextFrame();
@@ -240,12 +234,12 @@ void DXApp::DrawScene() {
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  ColorPassPerFrameData perFrameData;
+  ColorPass::PerFrameData perFrameData;
   perFrameData.projectionViewTransform = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
   perFrameData.shadowMapProjectionViewTransform = shadowMapViewPerspective4x4;
   perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPassPerFrameData), &perFrameData,
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData,
                                                   m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0,
                                           colorPassPerFrameConstantBuffer);
