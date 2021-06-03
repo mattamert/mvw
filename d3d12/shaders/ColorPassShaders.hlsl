@@ -43,7 +43,6 @@ float4 PSMain(PSInput input) : SV_TARGET{
     discard;
   }
 
-  // TODO: Don't hard-code light direction. Make it a parameter in the PerFrameData buffer.
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
 
   float2 shadowMapTexCoord =

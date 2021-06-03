@@ -19,6 +19,14 @@
 // entire frame (in this case it would be the heap managed as a ring buffer). This is necessary for
 // performance on some GPUs, as changing the bound heap can be expensive.
 // 
+// TODO: A better strategy:
+//       Building on top of the above, we should make sure that there is only one set of descriptors
+//       per draw-object. So if, e.g. an object is drawn in both the shadow map and the main color
+//       pass, then we should only have one set of descriptors referenced by both passes.
+//       I think the idea is to have some kind of "DrawObject" that we populate when we decide to
+//       draw something. That DrawObject would populate the ring-buffer descriptor heap once and
+//       then it'd be referenced by any pass.
+//
 
 struct DescriptorAllocation {
   D3D12_CPU_DESCRIPTOR_HANDLE cpuStart;

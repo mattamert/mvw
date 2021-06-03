@@ -18,8 +18,6 @@
 #include "d3d12/ShadowMap.h"
 #include "d3d12/WindowTarget.h"
 
-#define NUM_BACK_BUFFERS 2
-
 class MessageQueue;
 
 class DXApp {
@@ -61,8 +59,6 @@ class DXApp {
 
   PinholeCamera m_camera;
 
-  // TODO: Shadow maps aren't really "app" data, but there isn't really a better place to put it
-  // right now.
   ShadowMap m_shadowMap;
   OrthographicCamera m_shadowMapCamera;
 
