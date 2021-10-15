@@ -38,6 +38,9 @@ class DXApp {
   CircularBufferDescriptorAllocator m_circularSRVDescriptorAllocator;
 
   // Per-window data.
+  bool m_hasPendingResize = false;
+  unsigned int m_pendingClientWidth;
+  unsigned int m_pendingClientHeight;
   WindowTarget m_window;
 
   // Pass data.

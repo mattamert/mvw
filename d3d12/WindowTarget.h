@@ -20,10 +20,6 @@ class WindowTarget {
   unsigned int m_clientWidth;
   unsigned int m_clientHeight;
 
-  unsigned int m_pendingClientWidth;
-  unsigned int m_pendingClientHeight;
-  bool m_isResizePending = false;
-
   void InitializeDepthStencilMembers(ID3D12Device* device, unsigned int width, unsigned int height);
 
  public:
@@ -32,9 +28,7 @@ class WindowTarget {
                   ID3D12CommandQueue* commandQueue,
                   HWND hwnd);
 
-  bool HasPendingResize() const;
-  void AddPendingResize(unsigned int width, unsigned int height);
-  void HandlePendingResize();
+  void HandleResize(unsigned int width, unsigned int height);
 
   void WaitForNextFrame();
   void Present();

@@ -150,11 +150,12 @@ void DXApp::InitializeAppObjects(const std::string& objFilename) {
 }
 
 void DXApp::HandleResizeIfNecessary() {
-  if (m_window.HasPendingResize()) {
+  if (m_hasPendingResize) {
     // TODO: We don't actually have to flush the GPU Work now that we're using a waitable swap
     // chain. But it shouldn't affect anything, so right now, let's keep it in.
     FlushGPUWork();
-    m_window.HandlePendingResize();
+    m_window.HandleResize(m_pendingClientWidth, m_pendingClientHeight);
+    m_hasPendingResize = false;
   }
 }
 
@@ -362,7 +363,9 @@ bool DXApp::HandleMessages() {
       case WM_SIZE: {
         UINT width = LOWORD(msg.lParam);
         UINT height = HIWORD(msg.lParam);
-        m_window.AddPendingResize(width, height);
+        m_pendingClientWidth = width;
+        m_pendingClientHeight = height;
+        m_hasPendingResize = true;
         break;
       }
       case WM_DESTROY:

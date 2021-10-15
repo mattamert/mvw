@@ -109,31 +109,18 @@ void WindowTarget::InitializeDepthStencilMembers(ID3D12Device* device, unsigned 
   device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, dsvDescriptorHandle);
 }
 
-void WindowTarget::AddPendingResize(unsigned int width, unsigned int height) {
-  m_pendingClientWidth = width;
-  m_pendingClientHeight = height;
-  m_isResizePending = true;
-}
-
-bool WindowTarget::HasPendingResize() const {
-  return m_isResizePending;
-}
-
-void WindowTarget::HandlePendingResize() {
-  assert(m_isResizePending);
-
+void WindowTarget::HandleResize(unsigned int width, unsigned int height) {
   ComPtr<ID3D12Device> device;
   HR(m_swapChain->GetDevice(IID_PPV_ARGS(&device)));
 
   m_depthStencilBuffer.Reset();
-  InitializeDepthStencilMembers(device.Get(), m_pendingClientWidth, m_pendingClientHeight);
+  InitializeDepthStencilMembers(device.Get(), width, height);
 
   for (int i = 0; i < NUM_BACK_BUFFERS; ++i) {
     m_backBuffers[i].Reset();
   }
 
-  HR(m_swapChain->ResizeBuffers(0, m_pendingClientWidth, m_pendingClientHeight,
-                                DXGI_FORMAT_R8G8B8A8_UNORM,
+  HR(m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_R8G8B8A8_UNORM,
                                 DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT));
 
   DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
@@ -158,9 +145,8 @@ void WindowTarget::HandlePendingResize() {
     m_backBufferDescriptorHandles[i] = descriptorPtr;
   }
 
-  m_clientWidth = m_pendingClientWidth;
-  m_clientHeight = m_pendingClientHeight;
-  m_isResizePending = false;
+  m_clientWidth = width;
+  m_clientHeight = height;
 }
 
 void WindowTarget::WaitForNextFrame() {
