@@ -7,7 +7,7 @@
 
 using namespace Microsoft::WRL;
 
-void WindowTarget::Initialize(IDXGIFactory2* factory,
+void WindowSwapChain::Initialize(IDXGIFactory2* factory,
                               ID3D12Device* device,
                               ID3D12CommandQueue* commandQueue,
                               HWND hwnd) {
@@ -73,7 +73,7 @@ void WindowTarget::Initialize(IDXGIFactory2* factory,
   InitializeDepthStencilMembers(device, m_clientWidth, m_clientHeight);
 }
 
-void WindowTarget::InitializeDepthStencilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
+void WindowSwapChain::InitializeDepthStencilMembers(ID3D12Device* device, unsigned int width, unsigned int height) {
   CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
   D3D12_RESOURCE_DESC depthStencilBufferDesc = CD3DX12_RESOURCE_DESC::Tex2D(
       DXGI_FORMAT_D32_FLOAT, width, height, /*arraySize*/ 1, /*mipLevels*/ 1);
@@ -109,7 +109,7 @@ void WindowTarget::InitializeDepthStencilMembers(ID3D12Device* device, unsigned 
   device->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, dsvDescriptorHandle);
 }
 
-void WindowTarget::HandleResize(unsigned int width, unsigned int height) {
+void WindowSwapChain::HandleResize(unsigned int width, unsigned int height) {
   ComPtr<ID3D12Device> device;
   HR(m_swapChain->GetDevice(IID_PPV_ARGS(&device)));
 
@@ -149,39 +149,39 @@ void WindowTarget::HandleResize(unsigned int width, unsigned int height) {
   m_clientHeight = height;
 }
 
-void WindowTarget::WaitForNextFrame() {
+void WindowSwapChain::WaitForNextFrame() {
   // Waitable swap chain reference:
   // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains
   WaitForSingleObject(m_frameWaitableObjectHandle, INFINITE);
 }
 
-void WindowTarget::Present() {
+void WindowSwapChain::Present() {
   m_swapChain->Present(1, 0);
 }
 
-ID3D12Resource* WindowTarget::GetCurrentBackBuffer() {
+ID3D12Resource* WindowSwapChain::GetCurrentBackBuffer() {
   UINT currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
   assert(currentBackBufferIndex < NUM_BACK_BUFFERS);
   return m_backBuffers[currentBackBufferIndex].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE WindowTarget::GetCurrentBackBufferRTVHandle() {
+D3D12_CPU_DESCRIPTOR_HANDLE WindowSwapChain::GetCurrentBackBufferRTVHandle() {
   UINT currentBackBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
   assert(currentBackBufferIndex < NUM_BACK_BUFFERS);
   return m_backBufferDescriptorHandles[currentBackBufferIndex];
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE WindowTarget::GetDepthStencilViewHandle() {
+D3D12_CPU_DESCRIPTOR_HANDLE WindowSwapChain::GetDepthStencilViewHandle() {
   return m_dsvDescriptorHandle;
 }
 
-unsigned int WindowTarget::GetWidth() const {
+unsigned int WindowSwapChain::GetWidth() const {
   return m_clientWidth;
 }
-unsigned int WindowTarget::GetHeight() const {
+unsigned int WindowSwapChain::GetHeight() const {
   return m_clientHeight;
 }
 
-float WindowTarget::GetAspectRatio() const {
+float WindowSwapChain::GetAspectRatio() const {
   return (float)m_clientWidth / (float)m_clientHeight;
 }

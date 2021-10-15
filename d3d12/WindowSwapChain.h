@@ -4,7 +4,7 @@
 
 #define NUM_BACK_BUFFERS 2
 
-class WindowTarget {
+class WindowSwapChain {
   Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapChain;
   Microsoft::WRL::ComPtr<ID3D12Resource> m_backBuffers[NUM_BACK_BUFFERS];
   Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvDescriptorHeap;

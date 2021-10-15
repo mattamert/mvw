@@ -41,7 +41,7 @@ class DXApp {
   bool m_hasPendingResize = false;
   unsigned int m_pendingClientWidth;
   unsigned int m_pendingClientHeight;
-  WindowTarget m_window;
+  WindowSwapChain m_window;
 
   // Pass data.
   ColorPass m_colorPass;
