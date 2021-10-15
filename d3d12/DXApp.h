@@ -16,7 +16,7 @@
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceGarbageCollector.h"
 #include "d3d12/ShadowMap.h"
-#include "d3d12/WindowTarget.h"
+#include "d3d12/WindowSwapChain.h"
 
 class MessageQueue;
 

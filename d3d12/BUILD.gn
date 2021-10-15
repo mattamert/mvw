@@ -39,8 +39,8 @@ executable("d3d12_renderer") {
     "Timer.h",
     "WindowProxy.cpp",
     "WindowProxy.h",
-    "WindowTarget.cpp",
-    "WindowTarget.h",
+    "WindowSwapChain.cpp",
+    "WindowSwapChain.h",
   ]
 }
 

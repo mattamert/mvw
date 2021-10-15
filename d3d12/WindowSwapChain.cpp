@@ -1,4 +1,4 @@
-#include "d3d12/WindowTarget.h"
+#include "d3d12/WindowSwapChain.h"
 
 #include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"

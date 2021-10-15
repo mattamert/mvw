@@ -126,7 +126,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClCompile Include="..\..\d3d12\ResourceGarbageCollector.cpp" />
     <ClCompile Include="..\..\d3d12\ResourceHelper.cpp" />
     <ClCompile Include="..\..\d3d12\WindowProxy.cpp" />
-    <ClCompile Include="..\..\d3d12\WindowTarget.cpp" />
+    <ClCompile Include="..\..\d3d12\WindowSwapChain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\Animation.h" />
@@ -147,7 +147,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\ResourceGarbageCollector.h" />
     <ClInclude Include="..\..\d3d12\ResourceHelper.h" />
     <ClInclude Include="..\..\d3d12\WindowProxy.h" />
-    <ClInclude Include="..\..\d3d12\WindowTarget.h" />
+    <ClInclude Include="..\..\d3d12\WindowSwapChain.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\shaders\ColorPassShaders.hlsl" />
