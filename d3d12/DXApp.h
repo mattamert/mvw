@@ -14,6 +14,7 @@
 #include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
+#include "d3d12/RenderTarget.h"
 #include "d3d12/ResourceGarbageCollector.h"
 #include "d3d12/ShadowMap.h"
 #include "d3d12/WindowSwapChain.h"
@@ -42,6 +43,7 @@ class DXApp {
   unsigned int m_pendingClientWidth;
   unsigned int m_pendingClientHeight;
   WindowSwapChain m_window;
+  RenderTarget m_renderTarget;
 
   // Pass data.
   ColorPass m_colorPass;

@@ -101,6 +101,7 @@ void DXApp::InitializePerDeviceObjects() {
 
 void DXApp::InitializePerWindowObjects(HWND hwnd) {
   m_window.Initialize(m_factory.Get(), m_device.Get(), m_directCommandQueue.Get(), hwnd);
+  m_renderTarget.Initialize(m_device.Get(), m_window.GetWidth(), m_window.GetHeight());
 }
 
 void DXApp::InitializePerPassObjects() {
@@ -155,6 +156,7 @@ void DXApp::HandleResizeIfNecessary() {
     // chain. But it shouldn't affect anything, so right now, let's keep it in.
     FlushGPUWork();
     m_window.HandleResize(m_pendingClientWidth, m_pendingClientHeight);
+    m_renderTarget.HandleResize(m_device.Get(), m_pendingClientWidth, m_pendingClientHeight);
     m_hasPendingResize = false;
   }
 }
@@ -172,6 +174,28 @@ void DXApp::DrawScene() {
 
   RunShadowPass();
   RunColorPass();
+
+  CD3DX12_RESOURCE_BARRIER preCopyResourceBarriers[] = {
+      CD3DX12_RESOURCE_BARRIER::Transition(m_window.GetCurrentBackBuffer(),
+                                           D3D12_RESOURCE_STATE_PRESENT,
+                                           D3D12_RESOURCE_STATE_COPY_DEST),
+      CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget.GetRenderTargetResource(),
+                                           D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                           D3D12_RESOURCE_STATE_COPY_SOURCE),
+  };
+
+  m_cl->ResourceBarrier(2, preCopyResourceBarriers);
+  m_cl->CopyResource(m_window.GetCurrentBackBuffer(), m_renderTarget.GetRenderTargetResource());
+
+  CD3DX12_RESOURCE_BARRIER postCopyResourceBarriers[] = {
+      CD3DX12_RESOURCE_BARRIER::Transition(m_window.GetCurrentBackBuffer(),
+                                           D3D12_RESOURCE_STATE_COPY_DEST,
+                                           D3D12_RESOURCE_STATE_PRESENT),
+      CD3DX12_RESOURCE_BARRIER::Transition(m_renderTarget.GetRenderTargetResource(),
+                                           D3D12_RESOURCE_STATE_COPY_SOURCE,
+                                           D3D12_RESOURCE_STATE_RENDER_TARGET),
+  };
+  m_cl->ResourceBarrier(2, postCopyResourceBarriers);
 
   m_cl->Close();
   ID3D12CommandList* cl[] = {m_cl.Get()};
@@ -239,8 +263,8 @@ void DXApp::RunShadowPass() {
 // Will transition the back buffer back to D3D12_RESOURCE_STATE_PRESENT when done.
 void DXApp::RunColorPass() {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_window.GetCurrentBackBufferRTVHandle();
-  D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_window.GetDepthStencilViewHandle();
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRenderTargetRTVHandle();
+  D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_renderTarget.GetDepthStencilViewHandle();
 
   m_cl->SetPipelineState(m_colorPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_colorPass.GetRootSignature());
@@ -283,13 +307,9 @@ void DXApp::RunColorPass() {
   CD3DX12_RECT scissorRect(0, 0, width, height);
   m_cl->RSSetViewports(1, &clientAreaViewport);
   m_cl->RSSetScissorRects(1, &scissorRect);
-
-  CD3DX12_RESOURCE_BARRIER rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-    backBuffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-  m_cl->ResourceBarrier(1, &rtvResourceBarrier);
   m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-  float clearColor[4] = { 0.1, 0.2, 0.3, 1.0 };
+  float clearColor[4] = { 0.1f, 0.2f, 0.3f, 1.0f };
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -320,11 +340,6 @@ void DXApp::RunColorPass() {
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
   }
-
-  rtvResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-    backBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-  m_cl->ResourceBarrier(1, &rtvResourceBarrier);
 }
 
 void DXApp::SignalAndPresent() {

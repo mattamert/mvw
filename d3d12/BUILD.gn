@@ -29,6 +29,8 @@ executable("d3d12_renderer") {
     "ObjFileLoader.h",
     "Pass.cpp",
     "Pass.h",
+    "RenderTarget.cpp",
+    "RenderTarget.h",
     "ResourceGarbageCollector.cpp",
     "ResourceGarbageCollector.h",
     "ResourceHelper.cpp",
