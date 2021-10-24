@@ -67,6 +67,9 @@
     <ClCompile Include="..\..\d3d12\RenderTarget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\d3d12\TextureResources.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\d3d12\comhelper.h">
@@ -127,6 +130,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\RenderTarget.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\d3d12\TextureResources.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

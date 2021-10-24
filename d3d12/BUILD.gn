@@ -37,6 +37,8 @@ executable("d3d12_renderer") {
     "ResourceHelper.h",
     "ShadowMap.cpp",
     "ShadowMap.h",
+    "TextureResources.cpp",
+    "TextureResources.h",
     "Timer.cpp",
     "Timer.h",
     "WindowProxy.cpp",

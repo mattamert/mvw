@@ -17,6 +17,7 @@
 #include "d3d12/RenderTarget.h"
 #include "d3d12/ResourceGarbageCollector.h"
 #include "d3d12/ShadowMap.h"
+#include "d3d12/TextureResources.h"
 #include "d3d12/WindowSwapChain.h"
 
 class MessageQueue;
@@ -36,6 +37,8 @@ class DXApp {
 
   ConstantBufferAllocator m_constantBufferAllocator;
   LinearDescriptorAllocator m_linearSRVDescriptorAllocator;
+  LinearDescriptorAllocator m_linearDSVDescriptorAllocator;
+  LinearDescriptorAllocator m_linearRTVDescriptorAllocator;
   CircularBufferDescriptorAllocator m_circularSRVDescriptorAllocator;
 
   // Per-window data.
@@ -43,7 +46,8 @@ class DXApp {
   unsigned int m_pendingClientWidth;
   unsigned int m_pendingClientHeight;
   WindowSwapChain m_window;
-  RenderTarget m_renderTarget;
+  RenderTargetTexture m_renderTarget;
+  DepthBufferTexture m_depthBuffer;
 
   // Pass data.
   ColorPass m_colorPass;
@@ -64,7 +68,7 @@ class DXApp {
 
   PinholeCamera m_camera;
 
-  ShadowMap m_shadowMap;
+  DepthBufferTexture m_shadowMap;
   OrthographicCamera m_shadowMapCamera;
 
  public:
