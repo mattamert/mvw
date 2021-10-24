@@ -52,9 +52,6 @@
     <ClCompile Include="..\..\d3d12\Animation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\d3d12\ShadowMap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\d3d12\ConstantBufferAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -62,9 +59,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\d3d12\WindowSwapChain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\d3d12\RenderTarget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\d3d12\TextureResources.cpp">
@@ -117,9 +111,6 @@
     <ClInclude Include="..\..\d3d12\Animation.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\d3d12\ShadowMap.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\d3d12\ConstantBufferAllocator.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -127,9 +118,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\WindowSwapChain.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\d3d12\RenderTarget.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\d3d12\TextureResources.h">

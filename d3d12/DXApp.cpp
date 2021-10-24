@@ -9,7 +9,6 @@
 #include <string>
 
 #include "d3d12/MessageQueue.h"
-#include "d3d12/ResourceHelper.h"
 #include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
 

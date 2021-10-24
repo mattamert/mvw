@@ -14,9 +14,7 @@
 #include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
-#include "d3d12/RenderTarget.h"
 #include "d3d12/ResourceGarbageCollector.h"
-#include "d3d12/ShadowMap.h"
 #include "d3d12/TextureResources.h"
 #include "d3d12/WindowSwapChain.h"
 
