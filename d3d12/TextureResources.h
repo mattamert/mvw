@@ -6,12 +6,12 @@
 #include <wrl/client.h>  // For ComPtr
 
 class TextureResource {
-protected:
+ protected:
   Microsoft::WRL::ComPtr<ID3D12Resource> m_resource;
   unsigned int m_width;
   unsigned int m_height;
 
-public:
+ public:
   ID3D12Resource* GetResource();
   unsigned int GetWidth() const;
   unsigned int GetHeight() const;
@@ -34,12 +34,16 @@ class DepthBufferTexture : public TextureResource {
   DescriptorAllocation m_dsvDescriptor;
   DescriptorAllocation m_srvDescriptor;
 
-public:
+ public:
   void Initialize(ID3D12Device* device,
                   const DescriptorAllocation& dsvDescriptorDestination,
-                  const DescriptorAllocation& srvDescriptorDestination,
                   unsigned int width,
                   unsigned int height);
+  void InitializeWithSRV(ID3D12Device* device,
+                         const DescriptorAllocation& dsvDescriptorDestination,
+                         const DescriptorAllocation& srvDescriptorDestination,
+                         unsigned int width,
+                         unsigned int height);
 
   void Resize(ID3D12Device* device, unsigned int width, unsigned int height);
 

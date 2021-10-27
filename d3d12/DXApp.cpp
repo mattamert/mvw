@@ -101,11 +101,8 @@ void DXApp::InitializePerWindowObjects(HWND hwnd) {
                             m_linearRTVDescriptorAllocator.AllocateSingleDescriptor().cpuStart,
                             m_window.GetWidth(), m_window.GetHeight());
 
-  // TODO: The depth buffer here doesn't actually need an SRV. We should have an option to create a
-  //       depth buffer without an SRV.
   m_depthBuffer.Initialize(m_device.Get(),
                            m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
-                           m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(),
                            m_window.GetWidth(), m_window.GetHeight());
 }
 
@@ -122,8 +119,9 @@ void DXApp::InitializeFenceObjects() {
 }
 
 void DXApp::InitializeShadowMapObjects() {
-  m_shadowMap.Initialize(m_device.Get(), m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
-                         m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(), 2000, 2000);
+  m_shadowMap.InitializeWithSRV(
+      m_device.Get(), m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
+      m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(), 2000, 2000);
 
   m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
@@ -209,8 +207,7 @@ void DXApp::DrawScene() {
   m_directCommandQueue->ExecuteCommandLists(1, cl);
 }
 
-// Expects that the shadow map resource is in D3D12_RESOURCE_STATE_GENERIC_READ.
-// Will transition the shadow map resource back to GENERIC_READ when done.
+// Expects that the shadow map resource is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
 void DXApp::RunShadowPass() {
   m_cl->SetPipelineState(m_shadowMapPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
@@ -231,7 +228,6 @@ void DXApp::RunShadowPass() {
       m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1,
     shadowMapModelTransformConstantBuffer);
-
 
   unsigned int shadowMapWidth = m_shadowMap.GetWidth();
   unsigned int shadowMapHeight = m_shadowMap.GetHeight();
@@ -255,11 +251,9 @@ void DXApp::RunShadowPass() {
     m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
   }
-
 }
 
-// Expects that the back buffer is in D3D12_RESOURCE_STATE_PRESENT.
-// Will transition the back buffer back to D3D12_RESOURCE_STATE_PRESENT when done.
+// Expects that the shadow map resouce is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
 void DXApp::RunColorPass() {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRTVDescriptorHandle();
