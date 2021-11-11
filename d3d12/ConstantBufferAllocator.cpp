@@ -15,27 +15,23 @@ Microsoft::WRL::ComPtr<ID3D12Resource> AllocatePage(ID3D12Device* device) {
 
   Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
   HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                     IID_PPV_ARGS(&buffer)));
+                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer)));
 
   return std::move(buffer);
 }
 }  // namespace
 
-
-ConstantBufferAllocator::InFlightPage::InFlightPage(
-    Microsoft::WRL::ComPtr<ID3D12Resource> bufferInFlight,
-    size_t signalValueOfBuffer)
+ConstantBufferAllocator::InFlightPage::InFlightPage(Microsoft::WRL::ComPtr<ID3D12Resource> bufferInFlight,
+                                                    size_t signalValueOfBuffer)
     : buffer(std::move(bufferInFlight)), signalValue(signalValueOfBuffer) {}
 
 void ConstantBufferAllocator::Initialize(ID3D12Device* device) {
   m_device = device;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS ConstantBufferAllocator::AllocateAndUpload(
-    size_t requestedDataSizeInBytes,
-    void* data,
-    uint64_t nextSignalValue) {
+D3D12_GPU_VIRTUAL_ADDRESS ConstantBufferAllocator::AllocateAndUpload(size_t requestedDataSizeInBytes,
+                                                                     void* data,
+                                                                     uint64_t nextSignalValue) {
   // We don't currently support constant buffers larger than the page size (64KB).
   assert(requestedDataSizeInBytes <= c_pageSize);
   assert(requestedDataSizeInBytes > 0);
@@ -60,13 +56,11 @@ D3D12_GPU_VIRTUAL_ADDRESS ConstantBufferAllocator::AllocateAndUpload(
     m_currentMappedAddress = nullptr;
 
     CD3DX12_RANGE readRange(/*begin*/ 0, /*end*/ 0);
-    HR(m_currentBuffer->Map(/*subresource*/ 0, &readRange,
-                            reinterpret_cast<void**>(&m_currentMappedAddress)));
+    HR(m_currentBuffer->Map(/*subresource*/ 0, &readRange, reinterpret_cast<void**>(&m_currentMappedAddress)));
   }
 
   uint8_t* cpuAddress = m_currentMappedAddress + m_currentBufferOffset;
-  D3D12_GPU_VIRTUAL_ADDRESS gpuAddress =
-      m_currentBuffer->GetGPUVirtualAddress() + m_currentBufferOffset;
+  D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_currentBuffer->GetGPUVirtualAddress() + m_currentBufferOffset;
 
   memcpy(cpuAddress, data, requestedDataSizeInBytes);
 

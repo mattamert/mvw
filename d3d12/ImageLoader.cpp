@@ -11,17 +11,15 @@ HRESULT Image::LoadImageFile(const std::wstring& file, Image* img) {
   ComPtr<IWICImagingFactory> factory = nullptr;
   HRESULT hr = S_OK;
 
-  RETURN_IF_FAILED(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
-                                    IID_PPV_ARGS(&factory)));
+  RETURN_IF_FAILED(CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory)));
 
   ComPtr<IWICBitmapDecoder> decoder = nullptr;
-  RETURN_IF_FAILED(factory->CreateDecoderFromFilename(
-      file.c_str(),                    // Image to be decoded
-      NULL,                            // Do not prefer a particular vendor
-      GENERIC_READ,                    // Desired read access to the file
-      WICDecodeMetadataCacheOnDemand,  // Cache metadata when needed
-      &decoder                         // Pointer to the decoder
-      ));
+  RETURN_IF_FAILED(factory->CreateDecoderFromFilename(file.c_str(),  // Image to be decoded
+                                                      NULL,          // Do not prefer a particular vendor
+                                                      GENERIC_READ,  // Desired read access to the file
+                                                      WICDecodeMetadataCacheOnDemand,  // Cache metadata when needed
+                                                      &decoder                         // Pointer to the decoder
+                                                      ));
 
   // Retrieve the first frame of the image from the decoder
   ComPtr<IWICBitmapFrameDecode> frame = nullptr;
@@ -40,9 +38,8 @@ HRESULT Image::LoadImageFile(const std::wstring& file, Image* img) {
   if (!canConvert)
     return E_FAIL;
 
-  RETURN_IF_FAILED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA,
-                                         WICBitmapDitherTypeErrorDiffusion, nullptr, 0,
-                                         WICBitmapPaletteTypeMedianCut));
+  RETURN_IF_FAILED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeErrorDiffusion,
+                                         nullptr, 0, WICBitmapPaletteTypeMedianCut));
 
   UINT width;
   UINT height;

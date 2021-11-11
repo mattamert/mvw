@@ -31,19 +31,17 @@ void Model::Init(ID3D12Device* device,
   const size_t vertexBufferSize = sizeof(ObjData::Vertex) * vertices.size();
   CD3DX12_HEAP_PROPERTIES vertexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
   CD3DX12_RESOURCE_DESC vertexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-  HR(device->CreateCommittedResource(&vertexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &vertexBufferResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-                                     nullptr, IID_PPV_ARGS(&m_vertexBuffer)));
+  HR(device->CreateCommittedResource(&vertexBufferHeapProperties, D3D12_HEAP_FLAG_NONE, &vertexBufferResourceDesc,
+                                     D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_vertexBuffer)));
 
-  ComPtr<ID3D12Resource> intermediateVertexBuffer = ResourceHelper::AllocateIntermediateBuffer(
-      device, m_vertexBuffer.Get(), garbageCollector, nextSignalValue);
+  ComPtr<ID3D12Resource> intermediateVertexBuffer =
+      ResourceHelper::AllocateIntermediateBuffer(device, m_vertexBuffer.Get(), garbageCollector, nextSignalValue);
 
   D3D12_SUBRESOURCE_DATA vertexData;
   vertexData.pData = vertices.data();
   vertexData.RowPitch = vertexBufferSize;
   vertexData.SlicePitch = vertexBufferSize;
-  UpdateSubresources(cl, m_vertexBuffer.Get(), intermediateVertexBuffer.Get(), 0, 0, 1,
-                     &vertexData);
+  UpdateSubresources(cl, m_vertexBuffer.Get(), intermediateVertexBuffer.Get(), 0, 0, 1, &vertexData);
 
   m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
   m_vertexBufferView.SizeInBytes = vertexBufferSize;
@@ -51,8 +49,8 @@ void Model::Init(ID3D12Device* device,
 
   std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
   barriers.reserve(1 + 2 * objGroups.size());
-  barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
-      m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+  barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+                                                             D3D12_RESOURCE_STATE_GENERIC_READ));
 
   // Upload the ObjFile groups.
   m_groups.resize(objGroups.size());
@@ -64,12 +62,12 @@ void Model::Init(ID3D12Device* device,
     const size_t indexBufferSize = objGroup.indices.size() * sizeof(uint32_t);
     CD3DX12_HEAP_PROPERTIES indexBufferHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
     CD3DX12_RESOURCE_DESC indexBufferResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-    HR(device->CreateCommittedResource(&indexBufferHeapProperties, D3D12_HEAP_FLAG_NONE,
-      &indexBufferResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-      nullptr, IID_PPV_ARGS(&modelGroup.m_indexBuffer)));
+    HR(device->CreateCommittedResource(&indexBufferHeapProperties, D3D12_HEAP_FLAG_NONE, &indexBufferResourceDesc,
+                                       D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                       IID_PPV_ARGS(&modelGroup.m_indexBuffer)));
 
     ComPtr<ID3D12Resource> intermediateIndexBuffer = ResourceHelper::AllocateIntermediateBuffer(
-      device, modelGroup.m_indexBuffer.Get(), garbageCollector, nextSignalValue);
+        device, modelGroup.m_indexBuffer.Get(), garbageCollector, nextSignalValue);
 
     D3D12_SUBRESOURCE_DATA indexData;
     indexData.pData = objGroup.indices.data();
@@ -82,9 +80,8 @@ void Model::Init(ID3D12Device* device,
     modelGroup.m_indexBufferView.SizeInBytes = indexBufferSize;
     modelGroup.m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 
-    barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(modelGroup.m_indexBuffer.Get(),
-                                                               D3D12_RESOURCE_STATE_COPY_DEST,
-                                                               D3D12_RESOURCE_STATE_GENERIC_READ));
+    barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
+        modelGroup.m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 
     // TODO: We should check if we've already uploaded the file, and then just use that one.
     // This will get much more relevant when we factor in other of mtl's maps.
@@ -98,26 +95,23 @@ void Model::Init(ID3D12Device* device,
         // Upload the texture.
         const size_t imgBufferSize = img.data.size();
         CD3DX12_HEAP_PROPERTIES textureResourceHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-        CD3DX12_RESOURCE_DESC textureResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
-        HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE,
-                                           &textureResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-                                           nullptr, IID_PPV_ARGS(&modelGroup.m_texture)));
+        CD3DX12_RESOURCE_DESC textureResourceDesc =
+            CD3DX12_RESOURCE_DESC::Tex2D(img.format, img.width, img.height, /*arraySize*/ 1, /*mipLevels*/ 1);
+        HR(device->CreateCommittedResource(&textureResourceHeapProperties, D3D12_HEAP_FLAG_NONE, &textureResourceDesc,
+                                           D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                           IID_PPV_ARGS(&modelGroup.m_texture)));
 
-        ComPtr<ID3D12Resource> intermediateTextureBuffer =
-            ResourceHelper::AllocateIntermediateBuffer(device, modelGroup.m_texture.Get(),
-                                                       garbageCollector, nextSignalValue);
+        ComPtr<ID3D12Resource> intermediateTextureBuffer = ResourceHelper::AllocateIntermediateBuffer(
+            device, modelGroup.m_texture.Get(), garbageCollector, nextSignalValue);
 
         D3D12_SUBRESOURCE_DATA textureData;
         textureData.pData = img.data.data();
         textureData.RowPitch = img.bytesPerPixel * img.width;
         textureData.SlicePitch = img.bytesPerPixel * img.width * img.height;
-        UpdateSubresources(cl, modelGroup.m_texture.Get(), intermediateTextureBuffer.Get(), 0, 0, 1,
-                           &textureData);
+        UpdateSubresources(cl, modelGroup.m_texture.Get(), intermediateTextureBuffer.Get(), 0, 0, 1, &textureData);
 
         barriers.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(
-            modelGroup.m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+            modelGroup.m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
         srvDesc.Format = img.format;
@@ -129,8 +123,7 @@ void Model::Init(ID3D12Device* device,
         srvDesc.Texture2D.ResourceMinLODClamp = 0;
 
         modelGroup.m_srvDescriptor = descriptorAllocator.AllocateSingleDescriptor();
-        device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc,
-                                         modelGroup.m_srvDescriptor.cpuStart);
+        device->CreateShaderResourceView(modelGroup.m_texture.Get(), &srvDesc, modelGroup.m_srvDescriptor.cpuStart);
       }
     }
   }
@@ -208,8 +201,7 @@ void Model::InitCube(ID3D12Device* device,
   std::vector<ObjData::Material> materials;
 
   // TODO: Generate generic material.
-  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, vertices, group,
-       materials);
+  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, vertices, group, materials);
 }
 
 bool Model::InitFromObjFile(ID3D12Device* device,
@@ -224,8 +216,8 @@ bool Model::InitFromObjFile(ID3D12Device* device,
   }
 
   m_bounds = data.m_bounds;
-  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, data.m_vertices,
-       data.m_groups, data.m_materials);
+  Init(device, cl, descriptorAllocator, garbageCollector, nextSignalValue, data.m_vertices, data.m_groups,
+       data.m_materials);
 
   return true;
 }
@@ -233,7 +225,6 @@ bool Model::InitFromObjFile(ID3D12Device* device,
 D3D12_VERTEX_BUFFER_VIEW& Model::GetVertexBufferView() {
   return m_vertexBufferView;
 }
-
 
 const ObjData::AxisAlignedBounds& Model::GetBounds() const {
   return m_bounds;

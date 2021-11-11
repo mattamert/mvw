@@ -14,13 +14,8 @@ class WindowSwapChain {
   unsigned int m_clientHeight;
 
  public:
-  void Initialize(IDXGIFactory2* factory,
-                  ID3D12Device* device,
-                  ID3D12CommandQueue* commandQueue,
-                  HWND hwnd);
-
+  void Initialize(IDXGIFactory2* factory, ID3D12Device* device, ID3D12CommandQueue* commandQueue, HWND hwnd);
   void HandleResize(unsigned int width, unsigned int height);
-
   void WaitForNextFrame();
   void Present();
 

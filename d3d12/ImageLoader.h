@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include <dxgiformat.h>
 #include <Windows.h>
+#include <dxgiformat.h>
 
 struct Image {
   static HRESULT LoadImageFile(const std::wstring& file, Image* img);

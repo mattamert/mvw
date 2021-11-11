@@ -19,11 +19,11 @@ HRESULT CompileShader(LPCWSTR srcFile,
 #if defined(DEBUG) || defined(_DEBUG)
   flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
-  
+
   Microsoft::WRL::ComPtr<ID3DBlob> shaderBlob = nullptr;
   Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
-  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint,
-                                  profile, flags, 0, &shaderBlob, &errorBlob);
+  HRESULT hr = D3DCompileFromFile(srcFile, /*defines*/ nullptr, /*include*/ nullptr, entryPoint, profile, flags, 0,
+                                  &shaderBlob, &errorBlob);
   if (FAILED(hr)) {
     if (errorBlob) {
       OutputDebugStringA((char*)errorBlob->GetBufferPointer());
@@ -39,14 +39,12 @@ HRESULT CompileShader(LPCWSTR srcFile,
 void ColorPass::Initialize(ID3D12Device* device) {
   const CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {
       CD3DX12_STATIC_SAMPLER_DESC(
-          /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC,
-          D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-          D3D12_TEXTURE_ADDRESS_MODE_WRAP),
+          /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+          D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP),
       CD3DX12_STATIC_SAMPLER_DESC(
           /*shaderRegister*/ 1, /*D3D12_FILTER*/ D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT,
-          D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-          D3D12_TEXTURE_ADDRESS_MODE_BORDER, /*mipLODBias*/ 0.f, /*maxAnisotropy*/ 16,
-          D3D12_COMPARISON_FUNC_LESS_EQUAL) };
+          D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+          /*mipLODBias*/ 0.f, /*maxAnisotropy*/ 16, D3D12_COMPARISON_FUNC_LESS_EQUAL)};
 
   CD3DX12_DESCRIPTOR_RANGE shadowMapTable;
   shadowMapTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
@@ -57,10 +55,8 @@ void ColorPass::Initialize(ID3D12Device* device) {
   // CBV 0 is the per-frame data.
   // CBV 1 is the per-object data.
   CD3DX12_ROOT_PARAMETER parameters[4] = {};
-  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
-                                         D3D12_SHADER_VISIBILITY_ALL);
-  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
-                                         D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_ALL);
+  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_VERTEX);
   parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &shadowMapTable,
                                       D3D12_SHADER_VISIBILITY_PIXEL);
   parameters[3].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,
@@ -75,19 +71,18 @@ void ColorPass::Initialize(ID3D12Device* device) {
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
-  if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-    &rootSignatureBlob, &errorBlob))) {
+  if (FAILED(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob,
+                                         &errorBlob))) {
     if (errorBlob) {
       OutputDebugStringA((char*)errorBlob->GetBufferPointer());
     }
     HR(E_FAIL);
   }
-  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
-                                 rootSignatureBlob->GetBufferSize(),
+  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(),
                                  IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", /*out*/m_vertexShader));
-  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", /*out*/m_pixelShader));
+  HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", /*out*/ m_vertexShader));
+  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", /*out*/ m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -132,15 +127,12 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
   // This is the sampler for determining if the texture at a certain point is fully transparent;
   // therefore, just use point sampling.
   const CD3DX12_STATIC_SAMPLER_DESC pointSampler(
-      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT,
-      D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-      D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+      D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
   CD3DX12_ROOT_PARAMETER parameters[2] = {};
-  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0,
-    D3D12_SHADER_VISIBILITY_VERTEX);
-  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0,
-    D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
   rootSignatureDesc.NumParameters = 2;
@@ -151,14 +143,12 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
 
   ComPtr<ID3DBlob> rootSignatureBlob;
   ComPtr<ID3DBlob> errorBlob;
-  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0,
-    &rootSignatureBlob, &errorBlob));
-  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(),
-    rootSignatureBlob->GetBufferSize(),
-    IID_PPV_ARGS(&m_rootSignature)));
+  HR(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSignatureBlob, &errorBlob));
+  HR(device->CreateRootSignature(0, rootSignatureBlob->GetBufferPointer(), rootSignatureBlob->GetBufferSize(),
+                                 IID_PPV_ARGS(&m_rootSignature)));
 
-  HR(CompileShader(L"ShadowMapShaders.hlsl", "VSMain", "vs_5_0", /*out*/m_vertexShader));
-  HR(CompileShader(L"ShadowMapShaders.hlsl", "PSMain", "ps_5_0", /*out*/m_pixelShader));
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "VSMain", "vs_5_0", /*out*/ m_vertexShader));
+  HR(CompileShader(L"ShadowMapShaders.hlsl", "PSMain", "ps_5_0", /*out*/ m_pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -170,10 +160,10 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
   };
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-  psoDesc.InputLayout = { inputElements, _countof(inputElements) };
+  psoDesc.InputLayout = {inputElements, _countof(inputElements)};
   psoDesc.pRootSignature = m_rootSignature.Get();
-  psoDesc.VS = { m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize() };
-  psoDesc.PS = { m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize() };
+  psoDesc.VS = {m_vertexShader->GetBufferPointer(), m_vertexShader->GetBufferSize()};
+  psoDesc.PS = {m_pixelShader->GetBufferPointer(), m_pixelShader->GetBufferSize()};
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
   psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
   psoDesc.RasterizerState.DepthBias = 50000;
@@ -183,7 +173,7 @@ void ShadowMapPass::Initialize(ID3D12Device* device) {
   psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
   psoDesc.SampleMask = UINT_MAX;
   psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  psoDesc.NumRenderTargets = 0; // Only render depths for the shadow map.
+  psoDesc.NumRenderTargets = 0;  // Only render depths for the shadow map.
   psoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
   psoDesc.SampleDesc.Count = 1;
   psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;

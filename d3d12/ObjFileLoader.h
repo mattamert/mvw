@@ -5,7 +5,7 @@
 #include <vector>
 
 class ObjData {
-public:
+ public:
   // TODO: Currently, none of the texture maps' options are handled. If we wish to fullky support
   // the obj file format, these should be added in.
 
@@ -68,9 +68,9 @@ public:
   struct Material {
     std::string name;
 
-    Color ambientColor = { 0.f, 0.f, 0.f };
-    Color diffuseColor = { 0.f, 0.f, 0.f };
-    Color specularColor = { 0.f, 0.f, 0.f };
+    Color ambientColor = {0.f, 0.f, 0.f};
+    Color diffuseColor = {0.f, 0.f, 0.f};
+    Color specularColor = {0.f, 0.f, 0.f};
     float specularExponent = 1.f;
 
     // The sharpness of the local reflection map. Value between 0 and 1000.

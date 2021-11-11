@@ -29,10 +29,10 @@ bool LoadFile(const char* fileName, std::vector<char>* fileContents) {
   *fileContents = std::move(contents);
   return true;
 }
-}
+}  // namespace
 
 // TODO: Texture options are not yet supported.
-//enum class TextureOption {
+// enum class TextureOption {
 //  BlendU,
 //  BlendV,
 //  BumpMultiplier,
@@ -55,7 +55,7 @@ enum class MtlDeclarationType {
   SpecularExponent,
 
   Dissolve,
-  Transparency, // Equivalent to (1 - Dissolve).
+  Transparency,  // Equivalent to (1 - Dissolve).
   TransmissionFilter,
   Sharpness,
   IndexOfRefraction,
@@ -457,15 +457,14 @@ bool MtlFileParser::Parse(const std::string& filePath) {
     if (!parseSucceeded) {
       std::string unrecognizedDeclaration;
       (void)tokenizer.AcceptString(&unrecognizedDeclaration);
-      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration "
-                << unrecognizedDeclaration << std::endl;
+      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration " << unrecognizedDeclaration
+                << std::endl;
       tokenizer.ForceAcceptNewLine();
       continue;
     }
 
     if (type != MtlDeclarationType::NewMaterial && !m_currentMaterial) {
-      std::cerr << "Line " << currentLineNumber << ": A material has not yet been set. Skipping."
-                << std::endl;
+      std::cerr << "Line " << currentLineNumber << ": A material has not yet been set. Skipping." << std::endl;
       tokenizer.ForceAcceptNewLine();
       continue;
     }
@@ -581,8 +580,7 @@ bool MtlFileParser::Parse(const std::string& filePath) {
     if (parseSucceeded) {
       if (!tokenizer.AcceptNewLine()) {
         tokenizer.ForceAcceptNewLine();
-        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber
-                  << std::endl;
+        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber << std::endl;
       }
     } else {
       std::cerr << "Parsing failed on line " << currentLineNumber << std::endl;
@@ -695,8 +693,7 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
   }
 
   if (!m_currentGroup) {
-    std::cerr << "Warning: file contains vertices that do not have a material assigned to them."
-              << std::endl;
+    std::cerr << "Warning: file contains vertices that do not have a material assigned to them." << std::endl;
     AddMaterialGroup();
   }
 
@@ -746,8 +743,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
     if (!parseSucceeded) {
       std::string unrecognizedDeclaration;
       (void)tokenizer.AcceptString(&unrecognizedDeclaration);
-      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration "
-                << unrecognizedDeclaration << std::endl;
+      std::cerr << "Line " << currentLineNumber << ". Unrecognized declaration " << unrecognizedDeclaration
+                << std::endl;
       tokenizer.ForceAcceptNewLine();
       continue;
     }
@@ -805,8 +802,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
 
           Indices curr;
           parseSucceeded &= ResolveRelativeIndex(posIndex, m_positions.size(), &curr.posIndex);
-          parseSucceeded &=
-              ResolveRelativeIndex(texCoordIndex, m_texCoords.size(), &curr.texCoordIndex);
+          parseSucceeded &= ResolveRelativeIndex(texCoordIndex, m_texCoords.size(), &curr.texCoordIndex);
           parseSucceeded &= ResolveRelativeIndex(normalIndex, m_normals.size(), &curr.normalIndex);
 
           indices.emplace_back(curr);
@@ -822,7 +818,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
       case ObjDeclarationType::Group: {
         // We don't actually care about the names of the groups, as they have no bearing on anything.
         std::string currentName;
-        while (tokenizer.AcceptString(&currentName));
+        while (tokenizer.AcceptString(&currentName))
+          ;
       } break;
 
       case ObjDeclarationType::Smooth: {
@@ -845,8 +842,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
         if (parseSucceeded) {
           int materialIndex = FindMaterialIndex(materialName);
           if (materialIndex < 0) {
-            std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name "
-                      << materialName << "." << std::endl;
+            std::cerr << "Line " << currentLineNumber << ". Warning: could not find material name " << materialName
+                      << "." << std::endl;
           }
 
           AddMaterialGroup(materialIndex);
@@ -854,7 +851,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
       } break;
 
       case ObjDeclarationType::Object: {
-        // Similar to a group declaration, we don't care about objects or their names; we just care about their vertices.
+        // Similar to a group declaration, we don't care about objects or their names; we just care about their
+        // vertices.
         std::string objectName;
         (void)tokenizer.AcceptString(&objectName);
       } break;
@@ -867,8 +865,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
     if (parseSucceeded) {
       if (!tokenizer.AcceptNewLine()) {
         tokenizer.ForceAcceptNewLine();
-        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber
-                  << std::endl;
+        std::cerr << "WARNING: Additional unparsed information on line " << currentLineNumber << std::endl;
       }
     } else {
       std::cerr << "Parsing failed on line " << currentLineNumber << std::endl;

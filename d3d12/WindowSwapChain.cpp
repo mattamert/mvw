@@ -8,9 +8,9 @@
 using namespace Microsoft::WRL;
 
 void WindowSwapChain::Initialize(IDXGIFactory2* factory,
-                              ID3D12Device* device,
-                              ID3D12CommandQueue* commandQueue,
-                              HWND hwnd) {
+                                 ID3D12Device* device,
+                                 ID3D12CommandQueue* commandQueue,
+                                 HWND hwnd) {
   m_hwnd = hwnd;
 
   RECT clientArea;
@@ -37,8 +37,7 @@ void WindowSwapChain::Initialize(IDXGIFactory2* factory,
 
   ComPtr<IDXGISwapChain1> swapChain;
   HR(factory->CreateSwapChainForHwnd(commandQueue, m_hwnd, &swapChainDesc,
-                                     /*pFullscreenDesc*/ nullptr, /*pRestrictToOutput*/ nullptr,
-                                     &swapChain));
+                                     /*pFullscreenDesc*/ nullptr, /*pRestrictToOutput*/ nullptr, &swapChain));
 
   HR(swapChain.As(&m_swapChain));
   m_frameWaitableObjectHandle = m_swapChain->GetFrameLatencyWaitableObject();

@@ -36,8 +36,7 @@ uint64_t Timer::GetTotalElapsedMicroseconds() {
 }
 
 double Timer::GetTotalElapsedMilliseconds() {
-  return static_cast<double>(GetTotalElapsedMicroseconds()) /
-    static_cast<double>(nanosecondsInMilliseconds);
+  return static_cast<double>(GetTotalElapsedMicroseconds()) / static_cast<double>(nanosecondsInMilliseconds);
 }
 
 double Timer::GetTotalElapsedSeconds() {

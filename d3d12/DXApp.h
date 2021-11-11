@@ -55,8 +55,6 @@ class DXApp {
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window instead?
   HANDLE m_fenceEvent = NULL;
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
-
-  // Garbage collector.
   ResourceGarbageCollector m_garbageCollector;
 
   // App data.

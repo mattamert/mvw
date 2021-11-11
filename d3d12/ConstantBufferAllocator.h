@@ -25,9 +25,7 @@ class ConstantBufferAllocator {
 
  public:
   void Initialize(ID3D12Device* device);
-  D3D12_GPU_VIRTUAL_ADDRESS AllocateAndUpload(size_t dataSizeInBytes,
-                                              void* data,
-                                              uint64_t nextSignalValue);
+  D3D12_GPU_VIRTUAL_ADDRESS AllocateAndUpload(size_t dataSizeInBytes, void* data, uint64_t nextSignalValue);
   void Cleanup(uint64_t currentSignalValue);
 
   // TODO: It would be useful to have an EndFrame function to let the constant buffer allocator know

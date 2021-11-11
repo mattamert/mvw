@@ -52,7 +52,6 @@ class Model {
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
   const ObjData::AxisAlignedBounds& GetBounds() const;
-  //ID3D12DescriptorHeap* GetSRVDescriptorHeap();
 
   // TODO: This is so sloppy, should be cleaned up. idk what to, though.
   size_t GetNumberOfGroups();

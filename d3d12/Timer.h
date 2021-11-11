@@ -4,12 +4,12 @@
 #include <cstdint>
 
 class Timer {
-private:
+ private:
   bool m_isRunning = false;
   LARGE_INTEGER m_frequency;
   LARGE_INTEGER m_startTime;
 
-public:
+ public:
   void Start();
   void Stop();
 

@@ -7,13 +7,11 @@ DirectX::XMMATRIX Object::GenerateModelTransform() const {
   midpoint[1] = (bounds.max[1] + bounds.min[1]) / 2;
   midpoint[2] = (bounds.max[2] + bounds.min[2]) / 2;
 
-  DirectX::XMMATRIX translationToOrigin =
-      DirectX::XMMatrixTranslation(-midpoint[0], -midpoint[1], -midpoint[2]);
+  DirectX::XMMATRIX translationToOrigin = DirectX::XMMatrixTranslation(-midpoint[0], -midpoint[1], -midpoint[2]);
 
   DirectX::XMMATRIX scale = DirectX::XMMatrixScaling(this->scale, this->scale, this->scale);
   DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(this->rotationY);
-  DirectX::XMMATRIX translation =
-      DirectX::XMMatrixTranslation(this->position.x, this->position.y, this->position.z);
+  DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(this->position.x, this->position.y, this->position.z);
 
   DirectX::XMMATRIX modelTransform = translationToOrigin * scale * rotation * translation;
   return modelTransform;

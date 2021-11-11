@@ -1,8 +1,8 @@
 #include <Windows.h>
 
 #include <cassert>
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 #include <string>
 #include <thread>
 
@@ -54,10 +54,7 @@ int main(int argc, char** argv) {
 
 #else
 
-int WINAPI WinMain(HINSTANCE /*hInstance*/,
-                   HINSTANCE /*hPrevInstance*/,
-                   LPSTR /* lpCmdLine */,
-                   int /*nCmdShow*/) {
+int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /* lpCmdLine */, int /*nCmdShow*/) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
   if (argc != 2) {

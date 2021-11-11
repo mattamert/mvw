@@ -26,7 +26,7 @@ DescriptorAllocation LinearDescriptorAllocator::AllocateSingleDescriptor() {
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
     heapDesc.Type = m_heapType;
     heapDesc.NumDescriptors = c_linearDescriptorHeapSize;
-    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE; // Not shader visible.
+    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;  // Not shader visible.
     heapDesc.NodeMask = 0;
     HR(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
 
@@ -43,8 +43,7 @@ DescriptorAllocation LinearDescriptorAllocator::AllocateSingleDescriptor() {
   return DescriptorAllocation{allocatedDescriptorCPU, allocatedDescriptorGPU, 1ull, allocatedIndex};
 }
 
-void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device,
-                                                   D3D12_DESCRIPTOR_HEAP_TYPE type) {
+void CircularBufferDescriptorAllocator::Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type) {
   m_device = device;
   m_heapType = type;
   m_descriptorIncrementSize = m_device->GetDescriptorHandleIncrementSize(type);
@@ -69,8 +68,7 @@ ID3D12DescriptorHeap* CircularBufferDescriptorAllocator::GetDescriptorHeap() {
   return m_descriptorHeap.Get();
 }
 
-DescriptorAllocation CircularBufferDescriptorAllocator::AllocateSingleDescriptor(
-    size_t nextSignalValue) {
+DescriptorAllocation CircularBufferDescriptorAllocator::AllocateSingleDescriptor(size_t nextSignalValue) {
   assert(m_numFreeDescriptors > 0);
   if (m_currentAllocation.has_value()) {
     // Assume that the signal value is monotomically increasing.
@@ -105,11 +103,8 @@ void CircularBufferDescriptorAllocator::Cleanup(size_t signalValue) {
     m_currentAllocation.reset();
   }
 
-  while (m_inFlightDescriptorRanges.size() > 0 &&
-         m_inFlightDescriptorRanges.front().signalValue <= signalValue) {
-
-    assert(m_inFlightDescriptorRanges.front().startIndex ==
-           (m_firstFreeIndex + m_numFreeDescriptors) % m_heapSize);
+  while (m_inFlightDescriptorRanges.size() > 0 && m_inFlightDescriptorRanges.front().signalValue <= signalValue) {
+    assert(m_inFlightDescriptorRanges.front().startIndex == (m_firstFreeIndex + m_numFreeDescriptors) % m_heapSize);
 
     m_numFreeDescriptors += m_inFlightDescriptorRanges.front().numDescriptors;
     m_inFlightDescriptorRanges.pop();

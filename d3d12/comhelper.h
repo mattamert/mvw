@@ -16,7 +16,10 @@ inline void HR(HRESULT hr) {
   }
 #endif
 
-#define RETURN_IF_FAILED(x) hr = x; if (FAILED(hr)) return hr;
+#define RETURN_IF_FAILED(x) \
+  hr = x;                   \
+  if (FAILED(hr))           \
+    return hr;
 
 template <class T>
 inline void SafeRelease(T** comInterfaceToRelease) {

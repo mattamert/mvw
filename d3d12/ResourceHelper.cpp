@@ -7,32 +7,27 @@
 
 using namespace Microsoft::WRL;
 
-Microsoft::WRL::ComPtr<ID3D12Resource> ResourceHelper::AllocateBuffer(
-    ID3D12Device* device,
-    unsigned int bytesToAllocate) {
+ComPtr<ID3D12Resource> ResourceHelper::AllocateBuffer(ID3D12Device* device, unsigned int bytesToAllocate) {
   D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bytesToAllocate);
   ComPtr<ID3D12Resource> buffer;
   HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                     IID_PPV_ARGS(&buffer)));
+                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer)));
 
   return buffer;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> ResourceHelper::AllocateIntermediateBuffer(
-    ID3D12Device* device,
-    ID3D12Resource* destinationResource,
-    ResourceGarbageCollector& garbageCollector,
-    uint64_t nextSignalValue) {
+ComPtr<ID3D12Resource> ResourceHelper::AllocateIntermediateBuffer(ID3D12Device* device,
+                                                                  ID3D12Resource* destinationResource,
+                                                                  ResourceGarbageCollector& garbageCollector,
+                                                                  uint64_t nextSignalValue) {
   const uint64_t uploadBufferSize = GetRequiredIntermediateSize(destinationResource, 0, 1);
   D3D12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
 
   ComPtr<ID3D12Resource> intermediateBuffer;
   HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                     IID_PPV_ARGS(&intermediateBuffer)));
+                                     D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&intermediateBuffer)));
 
   garbageCollector.MarkAsGarbage(intermediateBuffer, nextSignalValue);
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <d3d12.h>
 #include <DirectXMath.h>
+#include <d3d12.h>
 #include <wrl/client.h>  // For ComPtr
 
 // TODO: Maybe want to have a base class that these classes inherit from?
@@ -32,7 +32,7 @@ class ShadowMapPass {
   Microsoft::WRL::ComPtr<ID3DBlob> m_vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
 
-public:
+ public:
   void Initialize(ID3D12Device* device);
 
   ID3D12PipelineState* GetPipelineState();

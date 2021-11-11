@@ -13,7 +13,7 @@ class PinholeCamera {
 
 // TODO: Should probably make base class Camera.
 class OrthographicCamera {
-public:
+ public:
   DirectX::XMMATRIX GenerateViewPerspectiveTransform() const;
   DirectX::XMFLOAT4X4 GenerateViewPerspectiveTransform4x4() const;
 

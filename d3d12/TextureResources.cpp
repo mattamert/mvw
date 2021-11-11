@@ -24,16 +24,14 @@ void RenderTargetTexture::Initialize(ID3D12Device* device,
   m_rtvHandle = rtvDescriptorDestination;
 
   CD3DX12_HEAP_PROPERTIES heapProperties(D3D12_HEAP_TYPE_DEFAULT);
-  D3D12_RESOURCE_DESC renderTargetResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-      DXGI_FORMAT_R8G8B8A8_UNORM, m_width, m_height, /*arraySize*/ 1, /*mipLevels*/ 1);
+  D3D12_RESOURCE_DESC renderTargetResourceDesc =
+      CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, m_width, m_height, /*arraySize*/ 1, /*mipLevels*/ 1);
   renderTargetResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
   // float clearColor[4] = { 0.f, 0.f, 0.f, 0.f };
   float clearColor[4] = {0.1f, 0.2f, 0.3f, 1.0f};
-  D3D12_CLEAR_VALUE d3d12ClearValue =
-      CD3DX12_CLEAR_VALUE(renderTargetResourceDesc.Format, clearColor);
-  HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
-                                     &renderTargetResourceDesc, D3D12_RESOURCE_STATE_RENDER_TARGET,
-                                     &d3d12ClearValue, IID_PPV_ARGS(&m_resource)));
+  D3D12_CLEAR_VALUE d3d12ClearValue = CD3DX12_CLEAR_VALUE(renderTargetResourceDesc.Format, clearColor);
+  HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &renderTargetResourceDesc,
+                                     D3D12_RESOURCE_STATE_RENDER_TARGET, &d3d12ClearValue, IID_PPV_ARGS(&m_resource)));
 
   D3D12_RENDER_TARGET_VIEW_DESC rtvViewDesc;
   rtvViewDesc.Format = renderTargetResourceDesc.Format;
@@ -73,8 +71,7 @@ void DepthBufferTexture::InitializeWithSRV(ID3D12Device* device,
       /*sampleQuality*/ 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
   D3D12_CLEAR_VALUE clearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0);
   HR(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &depthBufferDesc,
-                                     D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue,
-                                     IID_PPV_ARGS(&m_resource)));
+                                     D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue, IID_PPV_ARGS(&m_resource)));
 
   D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
   dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;

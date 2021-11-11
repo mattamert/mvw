@@ -1,9 +1,9 @@
 #pragma once
 
 #include <d3d12.h>
+#include <wrl/client.h>  // For ComPtr
 #include <optional>
 #include <queue>
-#include <wrl/client.h>  // For ComPtr
 
 // The strategy for managing descriptors:
 //  - keep long-term copies of descriptors in non-shader-visible descriptor heaps, which are managed
@@ -18,7 +18,7 @@
 // Ultimately, we need to make sure that only one descriptor heap is bound to the pipeline for the
 // entire frame (in this case it would be the heap managed as a ring buffer). This is necessary for
 // performance on some GPUs, as changing the bound heap can be expensive.
-// 
+//
 // TODO: A better strategy:
 //       Building on top of the above, we should make sure that there is only one set of descriptors
 //       per draw-object. So if, e.g. an object is drawn in both the shadow map and the main color
@@ -45,7 +45,7 @@ struct DescriptorAllocation {
 //
 // These are not-shader-visible descriptors.
 class LinearDescriptorAllocator {
-private:
+ private:
   ID3D12Device* m_device = nullptr;
 
   // TODO:
@@ -61,7 +61,7 @@ private:
   size_t m_currentHeapSize;
   size_t m_currentIndex;
 
-public:
+ public:
   void Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type);
 
   DescriptorAllocation AllocateSingleDescriptor();
@@ -95,6 +95,6 @@ class CircularBufferDescriptorAllocator {
 
   // TODO: This also needs to return the GPU descriptor for SetGraphicsRootDescriptorTable.
   DescriptorAllocation AllocateSingleDescriptor(size_t nextSignalValue);
-  //DescriptorAllocation AllocateDescriptorRange(size_t nextSignalValue, size_t numDescriptors); // TODO.
+  // DescriptorAllocation AllocateDescriptorRange(size_t nextSignalValue, size_t numDescriptors); // TODO.
   void Cleanup(size_t signalValue);
 };
