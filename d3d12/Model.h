@@ -7,17 +7,18 @@
 #include <d3d12.h>
 #include <wrl/client.h>  // For ComPtr
 
+class D3D12Renderer;
+
 class Model {
  private:
   struct Group {
     Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
     size_t m_numIndices;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
-    D3D12_CPU_DESCRIPTOR_HANDLE m_srvDescriptorHandle;
 
+    // TODO: Split this off into a separate class that could be referenced by several groups.
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
     DescriptorAllocation m_srvDescriptor;
-    // TODO: Add material stuff.
   };
 
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
@@ -26,29 +27,14 @@ class Model {
 
   ObjData::AxisAlignedBounds m_bounds;
 
-  // TODO: This is a lot of parameters. This function should be slimmed down somehow.
-  void Init(ID3D12Device* device,
-            ID3D12GraphicsCommandList* cl,
-            LinearDescriptorAllocator& descriptorAllocator,
-            ResourceGarbageCollector& garbageCollector,
-            uint64_t nextSignalValue,
+  void Init(D3D12Renderer* renderer,
             const std::vector<ObjData::Vertex>& vertices,
             const std::vector<ObjData::MaterialGroup>& objGroups,
             const std::vector<ObjData::Material>& materials);
 
  public:
-  void InitCube(ID3D12Device* device,
-                ID3D12GraphicsCommandList* cl,
-                LinearDescriptorAllocator& descriptorAllocator,
-                ResourceGarbageCollector& garbageCollector,
-                uint64_t nextSignalValue);
-
-  bool InitFromObjFile(ID3D12Device* device,
-                       ID3D12GraphicsCommandList* cl,
-                       LinearDescriptorAllocator& descriptorAllocator,
-                       ResourceGarbageCollector& garbageCollector,
-                       uint64_t nextSignalValue,
-                       const std::string& fileName);
+  void InitCube(D3D12Renderer* renderer);
+  bool InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName);
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
   const ObjData::AxisAlignedBounds& GetBounds() const;

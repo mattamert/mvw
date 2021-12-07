@@ -11,6 +11,7 @@
 #include "d3d12/Animation.h"
 #include "d3d12/Camera.h"
 #include "d3d12/ConstantBufferAllocator.h"
+#include "d3d12/D3D12Renderer.h"
 #include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
@@ -23,69 +24,24 @@ class MessageQueue;
 
 class DXApp {
  private:
-  bool m_isInitialized = false;
-
   std::shared_ptr<MessageQueue> m_messageQueue;
+  D3D12Renderer m_renderer;
+  Scene m_scene;
 
-  // Per-device data.
-  Microsoft::WRL::ComPtr<IDXGIFactory4> m_factory;
-  Microsoft::WRL::ComPtr<ID3D12Device> m_device;
-  Microsoft::WRL::ComPtr<ID3D12CommandQueue> m_directCommandQueue;
-  Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_directCommandAllocator;
-  Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cl;
-
-  ConstantBufferAllocator m_constantBufferAllocator;
-  LinearDescriptorAllocator m_linearSRVDescriptorAllocator;
-  LinearDescriptorAllocator m_linearDSVDescriptorAllocator;
-  LinearDescriptorAllocator m_linearRTVDescriptorAllocator;
-  CircularBufferDescriptorAllocator m_circularSRVDescriptorAllocator;
-
-  // Per-window data.
+  // Window data.
   bool m_hasPendingResize = false;
   unsigned int m_pendingClientWidth;
   unsigned int m_pendingClientHeight;
-  WindowSwapChain m_window;
-  RenderTargetTexture m_renderTarget;
-  DepthBufferTexture m_depthBuffer;
 
-  // Pass data.
-  ColorPass m_colorPass;
-  ShadowMapPass m_shadowMapPass;
-
-  // Fence stuff.
-  Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;  // Is this actually per-window instead?
-  HANDLE m_fenceEvent = NULL;
-  uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
-  ResourceGarbageCollector m_garbageCollector;
-
-  DepthBufferTexture m_shadowMap;
-  OrthographicCamera m_shadowMapCamera;
-
-  Scene m_scene;
+  // Flag used for debugging.
+  bool m_isInitialized = false;
 
  public:
-  void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, std::string filename);
+  void Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, std::string filename);
   bool IsInitialized() const;
 
-  void HandleResizeIfNecessary();
-  void DrawScene();
-  void SignalAndPresent();
-
-  static void RunRenderLoop(std::unique_ptr<DXApp> app);
   bool HandleMessages();
-
- private:
-  // Note: InitializePerDeviceObjects must be called before the others.
-  void InitializePerDeviceObjects();
-  void InitializePerWindowObjects(HWND hwnd);
-  void InitializePerPassObjects();
-  void InitializeFenceObjects();
-  void InitializeShadowMapObjects();
-  void InitializeScene(const std::string& objFilename);
-
-  void RunShadowPass();
-  void RunColorPass();
-
+  void ExecuteFrame();
   void FlushGPUWork();
-  void WaitForNextFrame();
+  static void RunRenderLoop(std::unique_ptr<DXApp> app);
 };

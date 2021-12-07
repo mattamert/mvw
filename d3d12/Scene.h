@@ -8,6 +8,8 @@
 
 #include <string>
 
+class D3D12Renderer;
+
 class Scene {
   std::string m_objFilename;
   Object m_object;
@@ -16,12 +18,7 @@ class Scene {
   PinholeCamera m_camera;
 
 public:
-  void Initialize(const std::string& objFilename,
-                  ID3D12Device* device,
-                  ID3D12GraphicsCommandList* cl,
-                  LinearDescriptorAllocator& srvAllocator,
-                  ResourceGarbageCollector& garbageCollector,
-                  size_t nextFenceValue);
+  void Initialize(const std::string& objFilename, D3D12Renderer* renderer);
 
   void TickAnimations();
 

@@ -1,13 +1,10 @@
-#include "Scene.h"
+#include "d3d12/Scene.h"
 
-void Scene::Initialize(const std::string& objFilename,
-                       ID3D12Device* device,
-                       ID3D12GraphicsCommandList* cl,
-                       LinearDescriptorAllocator& srvAllocator,
-                       ResourceGarbageCollector& garbageCollector,
-                       size_t nextFenceValue) {
+#include "d3d12/D3D12Renderer.h"
+
+void Scene::Initialize(const std::string& objFilename, D3D12Renderer* renderer) {
   Model model;
-  model.InitFromObjFile(device, cl, srvAllocator, garbageCollector, nextFenceValue, objFilename);
+  model.InitFromObjFile(renderer, objFilename);
 
   const ObjData::AxisAlignedBounds& bounds = model.GetBounds();
   float width = std::abs(bounds.max[0] - bounds.min[0]);
