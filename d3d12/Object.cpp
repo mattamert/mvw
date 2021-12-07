@@ -1,7 +1,7 @@
 #include "d3d12/Object.h"
 
 DirectX::XMMATRIX Object::GenerateModelTransform() const {
-  const ObjData::AxisAlignedBounds bounds = this->model.GetBounds();
+  const ObjFileData::AxisAlignedBounds bounds = this->model.GetBounds();
   float midpoint[3];
   midpoint[0] = (bounds.max[0] + bounds.min[0]) / 2;
   midpoint[1] = (bounds.max[1] + bounds.min[1]) / 2;

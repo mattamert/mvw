@@ -6,7 +6,7 @@ void Scene::Initialize(const std::string& objFilename, D3D12Renderer* renderer) 
   Model model;
   model.InitFromObjFile(renderer, objFilename);
 
-  const ObjData::AxisAlignedBounds& bounds = model.GetBounds();
+  const ObjFileData::AxisAlignedBounds& bounds = model.GetBounds();
   float width = std::abs(bounds.max[0] - bounds.min[0]);
   float height = std::abs(bounds.max[1] - bounds.min[1]);
   float length = std::abs(bounds.max[2] - bounds.min[2]);

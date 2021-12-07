@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-class ObjData {
+class ObjFileData {
  public:
   // TODO: Currently, none of the texture maps' options are handled. If we wish to fullky support
   // the obj file format, these should be added in.

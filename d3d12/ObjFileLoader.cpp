@@ -373,24 +373,24 @@ bool Tokenizer::IsAtEnd() {
 // ------------------------------------------------------------------------------------------------
 class MtlFileParser {
   // Overall output.
-  std::vector<ObjData::Material> m_materials;
+  std::vector<ObjFileData::Material> m_materials;
 
   // Only used for parsing.
-  ObjData::Material* m_currentMaterial = nullptr;
+  ObjFileData::Material* m_currentMaterial = nullptr;
 
-  static bool ParseColor(Tokenizer& tokenizer, ObjData::Color* color);
+  static bool ParseColor(Tokenizer& tokenizer, ObjFileData::Color* color);
   static bool ParseTexture(Tokenizer& tokenizer,
                            const std::filesystem::path& containingPath,
-                           ObjData::Texture* texture);
+                           ObjFileData::Texture* texture);
 
  public:
   bool Parse(const std::string& fileName);
 
-  std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
+  std::vector<ObjFileData::Material>& GetMaterials() { return m_materials; }
 };
 
 /*static*/
-bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjData::Color* color) {
+bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjFileData::Color* color) {
   float parsedColor[3];
   if (!tokenizer.AcceptFloat(&parsedColor[0])) {
     std::string str;
@@ -422,7 +422,7 @@ bool MtlFileParser::ParseColor(Tokenizer& tokenizer, ObjData::Color* color) {
 
 bool MtlFileParser::ParseTexture(Tokenizer& tokenizer,
                                  const std::filesystem::path& containingPath,
-                                 ObjData::Texture* texture) {
+                                 ObjFileData::Texture* texture) {
   // TODO: Support texture options.
   // For now, just parse the file name/path.
   std::string filename;
@@ -506,7 +506,7 @@ bool MtlFileParser::Parse(const std::string& filePath) {
       } break;
       case MtlDeclarationType::TransmissionFilter: {
         EmitNotSupportedMessage(currentLineNumber, "transmission filter");
-        ObjData::Color color;
+        ObjFileData::Color color;
         parseSucceeded &= ParseColor(tokenizer, &color);
       } break;
 
@@ -534,42 +534,42 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 
       case MtlDeclarationType::AmbientMap: {
         EmitNotSupportedMessage(currentLineNumber, "ambient map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::SpecularMap: {
         EmitNotSupportedMessage(currentLineNumber, "specular map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::SpecularExponentMap: {
         EmitNotSupportedMessage(currentLineNumber, "specular exponent map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::DissolveMap: {
         EmitNotSupportedMessage(currentLineNumber, "dissolve map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::Decal: {
         EmitNotSupportedMessage(currentLineNumber, "decal map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::DisplacementMap: {
         EmitNotSupportedMessage(currentLineNumber, "displacement map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::BumpMap: {
         EmitNotSupportedMessage(currentLineNumber, "bump map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       case MtlDeclarationType::ReflectionMap: {
         EmitNotSupportedMessage(currentLineNumber, "reflection map");
-        ObjData::Texture fakeTexture;
+        ObjFileData::Texture fakeTexture;
         parseSucceeded &= ParseTexture(tokenizer, containingPath, &fakeTexture);
       } break;
       default:
@@ -594,18 +594,18 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 // ------------------------------------------------------------------------------------------------
 class ObjFileParser {
   // Overall result.
-  std::vector<ObjData::Vertex> m_vertices;
-  std::vector<ObjData::MaterialGroup> m_groups;
-  std::vector<ObjData::Material> m_materials;
+  std::vector<ObjFileData::Vertex> m_vertices;
+  std::vector<ObjFileData::MaterialGroup> m_groups;
+  std::vector<ObjFileData::Material> m_materials;
 
   // Only used for parsing.
-  ObjData::MaterialGroup* m_currentGroup = nullptr;
+  ObjFileData::MaterialGroup* m_currentGroup = nullptr;
   std::vector<Position> m_positions;
   std::vector<TexCoord> m_texCoords;
   std::vector<Normal> m_normals;
   std::unordered_map<Indices, uint32_t, Indices::Hash> m_mapIndicesToVertexIndex;
 
-  ObjData::AxisAlignedBounds m_bounds;
+  ObjFileData::AxisAlignedBounds m_bounds;
   bool m_areBoundsInitialized = false;
 
   bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
@@ -618,10 +618,10 @@ class ObjFileParser {
  public:
   bool Init(const std::string& filePath);
 
-  std::vector<ObjData::Vertex>& GetVertices() { return m_vertices; }
-  std::vector<ObjData::MaterialGroup>& GetGroups() { return m_groups; }
-  std::vector<ObjData::Material>& GetMaterials() { return m_materials; }
-  ObjData::AxisAlignedBounds& GetBounds() { return m_bounds; }
+  std::vector<ObjFileData::Vertex>& GetVertices() { return m_vertices; }
+  std::vector<ObjFileData::MaterialGroup>& GetGroups() { return m_groups; }
+  std::vector<ObjFileData::Material>& GetMaterials() { return m_materials; }
+  ObjFileData::AxisAlignedBounds& GetBounds() { return m_bounds; }
 };
 
 bool ObjFileParser::LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename) {
@@ -631,7 +631,7 @@ bool ObjFileParser::LoadMtlLib(const std::string& objFilename, const std::string
   if (std::filesystem::exists(mtlFilePath)) {
     MtlFileParser parser;
     if (parser.Parse(mtlFilePath.string())) {
-      std::vector<ObjData::Material>& parsedMaterials = parser.GetMaterials();
+      std::vector<ObjFileData::Material>& parsedMaterials = parser.GetMaterials();
       std::move(parsedMaterials.begin(), parsedMaterials.end(), std::back_inserter(m_materials));
       parsedMaterials.clear();
       return true;
@@ -673,7 +673,7 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
       const TexCoord& texCoord = m_texCoords[indices.texCoordIndex - 1];
       const Normal& normal = m_normals[indices.normalIndex - 1];
 
-      ObjData::Vertex vertex;
+      ObjFileData::Vertex vertex;
       vertex.pos[0] = pos.x;
       vertex.pos[1] = pos.y;
       vertex.pos[2] = pos.z;
@@ -902,7 +902,7 @@ void ObjFileParser::CalculateAxisAlignedBounds() {
   }
 }
 
-bool ObjData::ParseObjFile(const std::string& fileName) {
+bool ObjFileData::ParseObjFile(const std::string& fileName) {
   ObjFileParser parser;
   if (!parser.Init(fileName))
     return false;

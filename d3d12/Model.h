@@ -25,19 +25,19 @@ class Model {
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
   std::vector<Group> m_groups;
 
-  ObjData::AxisAlignedBounds m_bounds;
+  ObjFileData::AxisAlignedBounds m_bounds;
 
   void Init(D3D12Renderer* renderer,
-            const std::vector<ObjData::Vertex>& vertices,
-            const std::vector<ObjData::MaterialGroup>& objGroups,
-            const std::vector<ObjData::Material>& materials);
+            const std::vector<ObjFileData::Vertex>& vertices,
+            const std::vector<ObjFileData::MaterialGroup>& objGroups,
+            const std::vector<ObjFileData::Material>& materials);
 
  public:
   void InitCube(D3D12Renderer* renderer);
   bool InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName);
 
   D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView();
-  const ObjData::AxisAlignedBounds& GetBounds() const;
+  const ObjFileData::AxisAlignedBounds& GetBounds() const;
 
   // TODO: This is so sloppy, should be cleaned up. idk what to, though.
   size_t GetNumberOfGroups();
