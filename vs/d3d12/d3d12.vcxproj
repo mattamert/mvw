@@ -116,6 +116,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClCompile Include="..\..\d3d12\ImageLoader.cpp" />
     <ClCompile Include="..\..\d3d12\Object.cpp" />
     <ClCompile Include="..\..\d3d12\ObjFileLoader.cpp" />
+    <ClCompile Include="..\..\d3d12\Scene.cpp" />
     <ClCompile Include="..\..\d3d12\TextureResources.cpp" />
     <ClCompile Include="..\..\d3d12\Timer.cpp" />
     <ClCompile Include="..\..\d3d12\DXApp.cpp" />
@@ -136,6 +137,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
     <ClInclude Include="..\..\d3d12\ImageLoader.h" />
     <ClInclude Include="..\..\d3d12\Object.h" />
     <ClInclude Include="..\..\d3d12\ObjFileLoader.h" />
+    <ClInclude Include="..\..\d3d12\Scene.h" />
     <ClInclude Include="..\..\d3d12\TextureResources.h" />
     <ClInclude Include="..\..\d3d12\Timer.h" />
     <ClInclude Include="..\..\d3d12\comhelper.h" />

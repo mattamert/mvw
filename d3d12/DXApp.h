@@ -15,6 +15,7 @@
 #include "d3d12/Object.h"
 #include "d3d12/Pass.h"
 #include "d3d12/ResourceGarbageCollector.h"
+#include "d3d12/Scene.h"
 #include "d3d12/TextureResources.h"
 #include "d3d12/WindowSwapChain.h"
 
@@ -57,15 +58,10 @@ class DXApp {
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
   ResourceGarbageCollector m_garbageCollector;
 
-  // App data.
-  std::string m_objFilename;
-  Object m_object;
-  Animation m_objectRotationAnimation;
-
-  PinholeCamera m_camera;
-
   DepthBufferTexture m_shadowMap;
   OrthographicCamera m_shadowMapCamera;
+
+  Scene m_scene;
 
  public:
   void Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, std::string filename);
@@ -85,7 +81,7 @@ class DXApp {
   void InitializePerPassObjects();
   void InitializeFenceObjects();
   void InitializeShadowMapObjects();
-  void InitializeAppObjects(const std::string& objFilename);
+  void InitializeScene(const std::string& objFilename);
 
   void RunShadowPass();
   void RunColorPass();

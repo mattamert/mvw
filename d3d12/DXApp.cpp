@@ -40,7 +40,6 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, std::string filename) {
   m_messageQueue = std::move(messageQueue);
-  m_objFilename = std::move(filename);
 
   EnableDebugLayer();
 
@@ -49,7 +48,7 @@ void DXApp::Initialize(HWND hwnd, std::shared_ptr<MessageQueue> messageQueue, st
   InitializePerPassObjects();
   InitializeFenceObjects();
   InitializeShadowMapObjects();
-  InitializeAppObjects(m_objFilename);
+  InitializeScene(filename);
 
   HR(m_cl->Close());
   ID3D12CommandList* cl[] = {m_cl.Get()};
@@ -119,29 +118,9 @@ void DXApp::InitializeShadowMapObjects() {
   m_shadowMapCamera.heightInWorldCoordinates = 1.5;
 }
 
-void DXApp::InitializeAppObjects(const std::string& objFilename) {
-  Model model;
-  model.InitFromObjFile(m_device.Get(), m_cl.Get(), m_linearSRVDescriptorAllocator, m_garbageCollector,
-                        m_nextFenceValue, objFilename);
-
-  const ObjData::AxisAlignedBounds& bounds = model.GetBounds();
-  float width = std::abs(bounds.max[0] - bounds.min[0]);
-  float height = std::abs(bounds.max[1] - bounds.min[1]);
-  float length = std::abs(bounds.max[2] - bounds.min[2]);
-
-  // TODO: This syntax is weird, but I don't want to have to deal with windows headers right now.
-  // Ideally, we'd just define NOMINMAX as a compiler flag.
-  float maxDimension = (std::max)(width, (std::max)(height, length));
-
-  m_object.model = std::move(model);
-  m_object.position = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_object.rotationY = 0;
-  m_object.scale = 1 / maxDimension;  // Scale such that the max dimension is of height 1.
-
-  m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
-
-  m_camera.position_ = DirectX::XMFLOAT4(1.25, 0.25, 1.25, 1.f);
-  m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+void DXApp::InitializeScene(const std::string& objFilename) {
+  m_scene.Initialize(objFilename, m_device.Get(), m_cl.Get(), m_linearSRVDescriptorAllocator, m_garbageCollector,
+                     m_nextFenceValue);
 }
 
 void DXApp::HandleResizeIfNecessary() {
@@ -160,9 +139,7 @@ void DXApp::DrawScene() {
   HandleResizeIfNecessary();
   WaitForNextFrame();
 
-  // Update animation.
-  double progress = Animation::TickAnimation(m_objectRotationAnimation);
-  m_object.rotationY = progress * 2 * 3.14159265;
+  m_scene.TickAnimations();
 
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
@@ -205,7 +182,7 @@ void DXApp::RunShadowPass() {
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, shadowMapPerFrameConstantBuffer);
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMFLOAT4X4 modelTransform4x4 = m_object.GenerateModelTransform4x4();
+  DirectX::XMFLOAT4X4 modelTransform4x4 = m_scene.GetObj().GenerateModelTransform4x4();
   D3D12_GPU_VIRTUAL_ADDRESS shadowMapModelTransformConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, shadowMapModelTransformConstantBuffer);
@@ -223,14 +200,14 @@ void DXApp::RunShadowPass() {
   m_cl->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+  m_cl->IASetVertexBuffers(0, 1, &m_scene.GetObj().model.GetVertexBufferView());
 
-  for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
+  for (size_t i = 0; i < m_scene.GetObj().model.GetNumberOfGroups(); ++i) {
     // TODO: Eventually we will want to reference the texture in the shadow pass, so that we can
     // accurately clip pixels that are fully transparent.
     // m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
-    m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
-    m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
+    m_cl->IASetIndexBuffer(&m_scene.GetObj().model.GetIndexBufferView(i));
+    m_cl->DrawIndexedInstanced(m_scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
   }
 }
 
@@ -245,14 +222,14 @@ void DXApp::RunColorPass() {
 
   // Set up the constant buffer for the per-frame data.
   ColorPass::PerFrameData perFrameData;
-  perFrameData.projectionViewTransform = m_camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  perFrameData.projectionViewTransform = m_scene.GetCamera().GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
   perFrameData.shadowMapProjectionViewTransform = m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
   perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, colorPassPerFrameConstantBuffer);
 
-  DirectX::XMMATRIX modelTransform = m_object.GenerateModelTransform();
+  DirectX::XMMATRIX modelTransform = m_scene.GetObj().GenerateModelTransform();
   DirectX::XMMATRIX modelTransformModified = modelTransform;
   modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
   DirectX::XMMATRIX modelTransformInverseTranspose =
@@ -281,7 +258,7 @@ void DXApp::RunColorPass() {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &m_object.model.GetVertexBufferView());
+  m_cl->IASetVertexBuffers(0, 1, &m_scene.GetObj().model.GetVertexBufferView());
 
   CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -298,15 +275,15 @@ void DXApp::RunColorPass() {
 
   m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
 
-  for (size_t i = 0; i < m_object.model.GetNumberOfGroups(); ++i) {
+  for (size_t i = 0; i < m_scene.GetObj().model.GetNumberOfGroups(); ++i) {
     DescriptorAllocation textureSRVDescriptor =
         m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
-    m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart, m_object.model.GetTextureDescriptorHandle(i),
+    m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart, m_scene.GetObj().model.GetTextureDescriptorHandle(i),
                                     D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
 
-    m_cl->IASetIndexBuffer(&m_object.model.GetIndexBufferView(i));
-    m_cl->DrawIndexedInstanced(m_object.model.GetNumIndices(i), 1, 0, 0, 0);
+    m_cl->IASetIndexBuffer(&m_scene.GetObj().model.GetIndexBufferView(i));
+    m_cl->DrawIndexedInstanced(m_scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
   }
 
   shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(

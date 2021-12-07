@@ -33,6 +33,8 @@ executable("d3d12_renderer") {
     "ResourceGarbageCollector.h",
     "ResourceHelper.cpp",
     "ResourceHelper.h",
+    "Scene.cpp",
+    "Scene.h",
     "TextureResources.cpp",
     "TextureResources.h",
     "Timer.cpp",
