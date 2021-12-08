@@ -1,16 +1,16 @@
 #include "DXApp.h"
 
-#include <Windows.h>
+#include "d3d12/comhelper.h"
+#include "d3d12/d3dx12.h"
+#include "d3d12/MessageQueue.h"
+
 #include <d3d12.h>
 #include <d3dcompiler.h>
+#include <Windows.h>
 
 #include <cassert>
 #include <iostream>
 #include <string>
-
-#include "d3d12/MessageQueue.h"
-#include "d3d12/comhelper.h"
-#include "d3d12/d3dx12.h"
 
 void DXApp::Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, std::string filename) {
   m_messageQueue = std::move(messageQueue);

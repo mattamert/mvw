@@ -1,21 +1,17 @@
 #include "d3d12/Model.h"
 
+#include "d3d12/comhelper.h"
 #include "d3d12/D3D12Renderer.h"
+#include "d3d12/d3dx12.h"
 #include "d3d12/ImageLoader.h"
 #include "d3d12/ObjFileLoader.h"
-#include "d3d12/Pass.h"
-#include "d3d12/ResourceHelper.h"
-#include "d3d12/comhelper.h"
-#include "d3d12/d3dx12.h"
+
+#include <wrl/client.h>  // For ComPtr
 
 #include <assert.h>
 #include <filesystem>
 #include <iostream>
 #include <vector>
-
-#include "d3d12/ObjFileLoader.h"
-
-#include <wrl/client.h>  // For ComPtr
 
 using namespace Microsoft::WRL;
 
@@ -145,7 +141,6 @@ bool Model::InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName
   }
 
   m_bounds = data.m_bounds;
-  //Init(renderer, data.m_vertices, data.m_groups, data.m_materials);
   Init(renderer, data.m_vertices, data.m_indices, data.m_meshParts, data.m_materials);
   return true;
 }

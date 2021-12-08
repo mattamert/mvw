@@ -1,11 +1,11 @@
 #pragma once
 
+#include "d3d12/D3D12Renderer.h"
+#include "d3d12/Scene.h"
+
 #include <Windows.h>
 
 #include <memory>
-
-#include "d3d12/D3D12Renderer.h"
-#include "d3d12/Scene.h"
 
 class MessageQueue;
 

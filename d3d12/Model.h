@@ -2,7 +2,6 @@
 
 #include "d3d12/DescriptorHeapManagers.h"
 #include "d3d12/ObjFileLoader.h"
-#include "d3d12/ResourceGarbageCollector.h"
 
 #include <d3d12.h>
 #include <wrl/client.h>  // For ComPtr
