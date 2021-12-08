@@ -1,5 +1,8 @@
 #include "d3d12/Camera.h"
 
+#include <algorithm>
+#include <cmath>
+
 DirectX::XMMATRIX PinholeCamera::GenerateViewPerspectiveTransform(float aspectRatio) const {
   DirectX::XMVECTOR pos = DirectX::XMLoadFloat4(&this->position_);
   DirectX::XMVECTOR look_at = DirectX::XMLoadFloat4(&this->look_at_);
@@ -67,4 +70,29 @@ DirectX::XMFLOAT4 OrthographicCamera::GetLightDirection() const {
   DirectX::XMFLOAT4 result;
   DirectX::XMStoreFloat4(&result, lightDirVector);
   return result;
+}
+
+void ArcballCameraController::OnMouseDrag(int deltaX, int deltaY) {
+  m_rotationXInDegrees += -(float)deltaX / 2.f;
+  m_rotationYInDegrees += -(float)deltaY / 2.f;
+
+  m_rotationXInDegrees = std::fmodf(m_rotationXInDegrees, 360.f);
+  m_rotationYInDegrees = std::clamp(m_rotationYInDegrees, 10.f, 170.f);
+}
+
+PinholeCamera ArcballCameraController::GetPinholeCamera() const {
+  const float pi = 3.14159265f;
+  float rotationXInRadians = m_rotationXInDegrees * pi / 180.f;
+  float rotationYInRadians = m_rotationYInDegrees * pi / 180.f;
+
+  DirectX::XMFLOAT4 cartesianPosition;
+  cartesianPosition.x = m_distance * std::sinf(rotationYInRadians) * std::cosf(rotationXInRadians);
+  cartesianPosition.y = m_distance * std::cosf(rotationYInRadians);
+  cartesianPosition.z = m_distance * std::sinf(rotationYInRadians) * std::sinf(rotationXInRadians);
+  cartesianPosition.w = 1.f;
+
+  PinholeCamera pinholeCamera;
+  pinholeCamera.position_ = cartesianPosition;
+  pinholeCamera.look_at_ = m_arcballCenter;
+  return pinholeCamera;
 }

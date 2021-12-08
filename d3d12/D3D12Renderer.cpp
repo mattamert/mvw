@@ -110,7 +110,7 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
   RunShadowPass(scene.m_object);
-  RunColorPass(scene.m_camera, scene.m_object);
+  RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_object);
 
   CD3DX12_RESOURCE_BARRIER preCopyResourceBarriers[] = {
       CD3DX12_RESOURCE_BARRIER::Transition(m_window.GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT,

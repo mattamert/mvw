@@ -25,6 +25,10 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
     }
 
     case WM_SIZE:
+    case WM_POINTERUPDATE:
+    case WM_POINTERDOWN:
+    case WM_POINTERUP:
+    case WM_POINTERLEAVE:
       if (handler != nullptr) {
         handler->PushMessage(msg);
       }

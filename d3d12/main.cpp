@@ -29,6 +29,10 @@ void RunMessageLoop() {
 int main(int argc, char** argv) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
+  if (!IsMouseInPointerEnabled()) {
+    (void)EnableMouseInPointer(TRUE);
+  }
+
   if (argc != 2) {
     std::cerr << "Usage: d3d12_renderer.exe <obj file>" << std::endl;
     return 1;

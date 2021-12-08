@@ -20,6 +20,11 @@ class DXApp {
   unsigned int m_pendingClientWidth;
   unsigned int m_pendingClientHeight;
 
+  // Input.
+  bool m_isLeftButtonDown = false;
+  int m_currentPointerX;
+  int m_currentPointerY;
+
   // Flag used for debugging.
   bool m_isInitialized = false;
 
@@ -31,4 +36,9 @@ class DXApp {
   void ExecuteFrame();
   void FlushGPUWork();
   static void RunRenderLoop(std::unique_ptr<DXApp> app);
+
+  // Input.
+  void OnLeftButtonDown(int x, int y);
+  void OnLeftButtonUp(int x, int y);
+  void OnPointerUpdate(int x, int y);
 };

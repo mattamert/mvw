@@ -22,11 +22,14 @@ void Scene::Initialize(const std::string& objFilename, D3D12Renderer* renderer) 
 
   m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
 
-  m_camera.position_ = DirectX::XMFLOAT4(1.25, 0.25, 1.25, 1.f);
-  m_camera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_camera.m_arcballCenter = DirectX::XMFLOAT4(0.f, 0.f, 0.f, 1.f);
+  m_camera.m_rotationXInDegrees = 0.f;
+  m_camera.m_rotationYInDegrees = 90.f;
+  m_camera.m_distance = 1.f;
 }
 
 void Scene::TickAnimations() {
-  double progress = Animation::TickAnimation(m_objectRotationAnimation);
-  m_object.rotationY = progress * 2 * 3.14159265;
+  // Disable the rotating animation for now so that it doesn't conflict with mouse movement.
+  //double progress = Animation::TickAnimation(m_objectRotationAnimation);
+  //m_object.rotationY = progress * 2 * 3.14159265;
 }

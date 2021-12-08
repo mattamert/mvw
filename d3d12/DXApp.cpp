@@ -7,6 +7,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <Windows.h>
+#include <windowsx.h> // For GET_X_LPARAM & family.
 
 #include <cassert>
 #include <iostream>
@@ -36,6 +37,52 @@ bool DXApp::HandleMessages() {
         m_hasPendingResize = true;
         break;
       }
+
+      case WM_POINTERDOWN:
+        std::cout << "WM_POINTERDOWN - flag: " << std::hex << (DWORD)HIWORD(msg.wParam) << std::endl;
+        if (IS_POINTER_FIRSTBUTTON_WPARAM(msg.wParam)) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonDown(x, y);
+        }
+        break;
+
+      case WM_POINTERUP:
+        // It's a little strange, but WM_POINTERUP messages don't appear to set the flag for which button-up event it
+        // refers to. Instead, it seems to rely on the application to have kept track of it, and assumes that there can
+        // never be 2 pointer buttons held down at the same time. (This largely goes against what the documentation
+        // implicitly says though).
+        //
+        // Also, from the disclaimer on the documentation:
+        //    When a window loses capture of a pointer and it receives the WM_POINTERCAPTURECHANGED notification, it
+        //    typically will not receive any further notifications. For this reason, it is important that you not make
+        //    any assumptions based on evenly paired WM_POINTERDOWN/WM_POINTERUP or WM_POINTERENTER/WM_POINTERLEAVE
+        //    notifications.
+        // Therefore, we should also add logic for WM_POINTERCAPTURECHANGED to correctly configure m_isLeftButtonDown.
+        if (m_isLeftButtonDown) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonUp(x, y);
+        }
+        break;
+
+      // Touch input never actually sends a WM_POINTERUP for some reason, but rather WM_POINTERLEAVE.
+      // NOTE: I don't think this is true; should probably look at this again.
+      case WM_POINTERLEAVE:
+        if (m_isLeftButtonDown) {
+          int x = GET_X_LPARAM(msg.lParam);
+          int y = GET_Y_LPARAM(msg.lParam);
+          OnLeftButtonUp(x, y);
+        }
+        break;
+
+      case WM_POINTERUPDATE: {
+        int x = GET_X_LPARAM(msg.lParam);
+        int y = GET_Y_LPARAM(msg.lParam);
+        OnPointerUpdate(x, y);
+        break;
+      }
+
       case WM_DESTROY:
         return true;
     }
@@ -76,4 +123,27 @@ void DXApp::RunRenderLoop(std::unique_ptr<DXApp> app) {
   }
 
   app->FlushGPUWork();
+}
+
+void DXApp::OnLeftButtonDown(int x, int y) {
+  m_isLeftButtonDown = true;
+  m_currentPointerX = x;
+  m_currentPointerY = y;
+}
+
+void DXApp::OnLeftButtonUp(int x, int y) {
+  m_isLeftButtonDown = false;
+  m_currentPointerX = 0;
+  m_currentPointerY = 0;
+}
+
+void DXApp::OnPointerUpdate(int x, int y) {
+  if (m_isLeftButtonDown) {
+    int deltaX = x - m_currentPointerX;
+    int deltaY = y - m_currentPointerY;
+    m_currentPointerX = x;
+    m_currentPointerY = y;
+
+    m_scene.m_camera.OnMouseDrag(deltaX, deltaY);
+  }
 }
