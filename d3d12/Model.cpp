@@ -20,6 +20,8 @@ void Model::Init(D3D12Renderer* renderer,
                  const std::vector<uint32_t>& indices,
                  const std::vector<ObjFileData::MeshPart>& meshParts,
                  const std::vector<ObjFileData::Material>& materials) {
+  renderer->BeginResourceUpload();
+
   std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
   barriers.reserve(2 + materials.size());  // 1 for vertex buffer, 1 for index buffer, plus all of the materials.
 
@@ -64,6 +66,7 @@ void Model::Init(D3D12Renderer* renderer,
   }
 
   renderer->ExecuteBarriers(barriers.size(), barriers.data());
+  renderer->FinalizeResourceUpload();
 }
 
 void Model::InitCube(D3D12Renderer* renderer) {

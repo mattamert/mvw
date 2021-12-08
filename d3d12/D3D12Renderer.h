@@ -68,7 +68,7 @@ public:
   void FlushGPUWork();
 
   // Used for scene initialization.
-  // TODO: This is still pretty sloppy. Need to clean it up somehow.
+  // TODO: This is all still pretty sloppy. Need to clean it up somehow.
   Microsoft::WRL::ComPtr<ID3D12Resource> AllocateAndUploadBufferData(const void* data, size_t sizeInBytes);
   Microsoft::WRL::ComPtr<ID3D12Resource> AllocateAndUploadTextureData(const void* textureData,
                                                                       DXGI_FORMAT format,
@@ -77,5 +77,6 @@ public:
                                                                       size_t height,
                                                                       /*out*/ DescriptorAllocation* srvDescriptor);
   void ExecuteBarriers(size_t numBarriers, const D3D12_RESOURCE_BARRIER* barriers);
-  void FinializeResourceUpload();
+  void BeginResourceUpload();
+  void FinalizeResourceUpload();
 };

@@ -38,9 +38,6 @@ void D3D12Renderer::Initialize(HWND hwnd) {
   InitializePerPassObjects();
   InitializeFenceObjects();
   InitializeShadowMapObjects();
-
-  // Intentionally not closing & executing the command list so that the scene can initialize itself.
-  // TODO: Clean that up; this really isn't an ideal solution.
 }
 
 void D3D12Renderer::InitializePerDeviceObjects() {
@@ -59,7 +56,8 @@ void D3D12Renderer::InitializePerDeviceObjects() {
   HR(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_directCommandAllocator.Get(),
                                  /*pInitialState*/ nullptr, IID_PPV_ARGS(&m_cl)));
 
-  // Keeping m_cl open so that default-heap resources can be initialized.
+  // Command lists automatically start out as open.
+  HR(m_cl->Close());
 
   m_constantBufferAllocator.Initialize(m_device.Get());
   m_linearSRVDescriptorAllocator.Initialize(m_device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -352,7 +350,11 @@ void D3D12Renderer::ExecuteBarriers(size_t numBarriers, const D3D12_RESOURCE_BAR
   m_cl->ResourceBarrier(numBarriers, barriers);
 }
 
-void D3D12Renderer::FinializeResourceUpload() {
+void D3D12Renderer::BeginResourceUpload() {
+  HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
+}
+
+void D3D12Renderer::FinalizeResourceUpload() {
   HR(m_cl->Close());
   ID3D12CommandList* cl[] = {m_cl.Get()};
   m_directCommandQueue->ExecuteCommandLists(1, cl);
