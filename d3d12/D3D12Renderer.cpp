@@ -351,6 +351,7 @@ void D3D12Renderer::ExecuteBarriers(size_t numBarriers, const D3D12_RESOURCE_BAR
 }
 
 void D3D12Renderer::BeginResourceUpload() {
+  HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 }
 

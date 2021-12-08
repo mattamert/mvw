@@ -23,7 +23,7 @@ void Model::Init(D3D12Renderer* renderer,
   renderer->BeginResourceUpload();
 
   std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
-  barriers.reserve(2 + materials.size());  // 1 for vertex buffer, 1 for index buffer, plus all of the materials.
+  barriers.reserve(2 + materials.size());  // 1 for vertex buffer, 1 for index buffer, 1 for each of the materials.
 
   // Upload the vertex data.
   const size_t vertexBufferSize = vertices.size() * sizeof(ObjFileData::Vertex);
