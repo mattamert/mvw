@@ -99,12 +99,6 @@ class ObjFileData {
     float normal[3];
   };
 
-  // Represents a group of vertices that all have the same material. Isn't equivalent to an obj file "group".
-  struct MaterialGroup {
-    std::vector<uint32_t> indices;
-    int materialIndex; // -1 if no material specified.
-  };
-
   struct MeshPart {
     uint32_t indexStart;
     uint32_t numIndices;

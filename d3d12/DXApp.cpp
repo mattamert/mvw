@@ -16,7 +16,7 @@ void DXApp::Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, st
   m_messageQueue = std::move(messageQueue);
   m_renderer.Initialize(hwnd);
   m_scene.Initialize(filename, &m_renderer);
-  m_renderer.FinializeResourceUpload();
+  m_renderer.FinializeResourceUpload(); // This whole thing is super jank, but it works for now.
   m_isInitialized = true;
 }
 

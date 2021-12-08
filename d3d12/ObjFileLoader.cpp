@@ -612,7 +612,7 @@ class ObjFileParser {
   bool LoadMtlLib(const std::string& objFilename, const std::string& mtlLibFilename);
   int FindMaterialIndex(const std::string& materialName);
 
-  void AddMaterialGroup(int materialIndex = -1);
+  void StartNewMeshPart(int materialIndex = -1);
   bool AddVerticesFromFace(const std::vector<Indices>& face);
   void CalculateAxisAlignedBounds();
 
@@ -653,7 +653,7 @@ int ObjFileParser::FindMaterialIndex(const std::string& materialName) {
   return -1;
 }
 
-void ObjFileParser::AddMaterialGroup(int materialIndex) {
+void ObjFileParser::StartNewMeshPart(int materialIndex) {
   m_meshParts.emplace_back();
   m_currentMeshPart = &m_meshParts.back();
   m_currentMeshPart->materialIndex = materialIndex;
@@ -698,7 +698,7 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
 
   if (!m_currentMeshPart) {
     std::cerr << "Warning: file contains vertices that do not have a material assigned to them." << std::endl;
-    AddMaterialGroup();
+    StartNewMeshPart();
   }
 
   assert(vertexIndices.size() >= 3);
@@ -852,7 +852,7 @@ bool ObjFileParser::Init(const std::string& filePath) {
                       << "." << std::endl;
           }
 
-          AddMaterialGroup(materialIndex);
+          StartNewMeshPart(materialIndex);
         }
       } break;
 
