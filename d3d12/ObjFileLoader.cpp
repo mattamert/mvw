@@ -595,11 +595,15 @@ bool MtlFileParser::Parse(const std::string& filePath) {
 class ObjFileParser {
   // Overall result.
   std::vector<ObjFileData::Vertex> m_vertices;
-  std::vector<ObjFileData::MaterialGroup> m_groups;
+  std::vector<uint32_t> m_indices;
+  std::vector<ObjFileData::MeshPart> m_meshParts;
   std::vector<ObjFileData::Material> m_materials;
+
+  std::vector<ObjFileData::MaterialGroup> m_groups;
 
   // Only used for parsing.
   ObjFileData::MaterialGroup* m_currentGroup = nullptr;
+  ObjFileData::MeshPart* m_currentMeshPart = nullptr;
   std::vector<Position> m_positions;
   std::vector<TexCoord> m_texCoords;
   std::vector<Normal> m_normals;
@@ -619,6 +623,8 @@ class ObjFileParser {
   bool Init(const std::string& filePath);
 
   std::vector<ObjFileData::Vertex>& GetVertices() { return m_vertices; }
+  std::vector<uint32_t>& GetIndices() { return m_indices; }
+  std::vector<ObjFileData::MeshPart>& GetMeshParts() { return m_meshParts; }
   std::vector<ObjFileData::MaterialGroup>& GetGroups() { return m_groups; }
   std::vector<ObjFileData::Material>& GetMaterials() { return m_materials; }
   ObjFileData::AxisAlignedBounds& GetBounds() { return m_bounds; }
@@ -655,6 +661,12 @@ void ObjFileParser::AddMaterialGroup(int materialIndex) {
   m_groups.emplace_back();
   m_groups.back().materialIndex = materialIndex;
   m_currentGroup = &m_groups.back();
+
+  m_meshParts.emplace_back();
+  m_currentMeshPart = &m_meshParts.back();
+  m_currentMeshPart->materialIndex = materialIndex;
+  m_currentMeshPart->indexStart = m_indices.size();
+  m_currentMeshPart->numIndices = 0;
 }
 
 bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
@@ -707,6 +719,12 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
     m_currentGroup->indices.push_back(base);
     m_currentGroup->indices.push_back(prev);
     m_currentGroup->indices.push_back(curr);
+
+    m_indices.push_back(base);
+    m_indices.push_back(prev);
+    m_indices.push_back(curr);
+    m_currentMeshPart->numIndices += 3;
+
     prev = curr;
   }
 
@@ -908,6 +926,8 @@ bool ObjFileData::ParseObjFile(const std::string& fileName) {
     return false;
 
   m_vertices = std::move(parser.GetVertices());
+  m_indices = std::move(parser.GetIndices());
+  m_meshParts = std::move(parser.GetMeshParts());
   m_groups = std::move(parser.GetGroups());
   m_materials = std::move(parser.GetMaterials());
   m_bounds = std::move(parser.GetBounds());

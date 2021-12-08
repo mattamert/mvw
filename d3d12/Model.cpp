@@ -21,6 +21,57 @@ using namespace Microsoft::WRL;
 
 void Model::Init(D3D12Renderer* renderer,
                  const std::vector<ObjFileData::Vertex>& vertices,
+                 const std::vector<uint32_t>& indices,
+                 const std::vector<ObjFileData::MeshPart>& meshParts,
+                 const std::vector<ObjFileData::Material>& materials) {
+  std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
+  barriers.reserve(2 + materials.size());  // 1 for vertex buffer, 1 for index buffer, plus all of the materials.
+
+  // Upload the vertex data.
+  const size_t vertexBufferSize = vertices.size() * sizeof(ObjFileData::Vertex);
+  m_vertexBuffer = renderer->AllocateAndUploadBufferData(vertices.data(), vertexBufferSize);
+  barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+    D3D12_RESOURCE_STATE_GENERIC_READ));
+
+  m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+  m_vertexBufferView.SizeInBytes = vertexBufferSize;
+  m_vertexBufferView.StrideInBytes = sizeof(ObjFileData::Vertex);
+
+  // Upload the index data.
+  const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+  m_indexBuffer = renderer->AllocateAndUploadBufferData(indices.data(), indexBufferSize);
+  barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
+                                                          D3D12_RESOURCE_STATE_GENERIC_READ));
+
+  m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+  m_indexBufferView.SizeInBytes = indexBufferSize;
+  m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+
+  // Just copy over the meshPart data.
+  m_meshParts = meshParts;
+
+  // Upload all of the texture data.
+  m_materials.resize(materials.size());
+  for (size_t i = 0; i < materials.size(); ++i) {
+    const ObjFileData::Material& material = materials[i];
+    if (std::filesystem::exists(material.diffuseMap.file)) {
+      Image img;
+      HR(Image::LoadImageFile(material.diffuseMap.file.wstring(), &img));
+
+      // Upload the texture.
+      m_materials[i].m_texture =
+          renderer->AllocateAndUploadTextureData(img.data.data(), img.format, img.bytesPerPixel, img.width, img.height,
+                                                 /*out*/ &m_materials[i].m_srvDescriptor);
+      barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+          m_materials[i].m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+    }
+  }
+
+  renderer->ExecuteBarriers(barriers.size(), barriers.data());
+}
+
+void Model::Init(D3D12Renderer* renderer,
+                 const std::vector<ObjFileData::Vertex>& vertices,
                  const std::vector<ObjFileData::MaterialGroup>& objGroups,
                  const std::vector<ObjFileData::Material>& materials) {
   std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
@@ -153,7 +204,8 @@ bool Model::InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName
   }
 
   m_bounds = data.m_bounds;
-  Init(renderer, data.m_vertices, data.m_groups, data.m_materials);
+  //Init(renderer, data.m_vertices, data.m_groups, data.m_materials);
+  Init(renderer, data.m_vertices, data.m_indices, data.m_meshParts, data.m_materials);
   return true;
 }
 

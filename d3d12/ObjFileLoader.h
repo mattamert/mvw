@@ -105,13 +105,23 @@ class ObjFileData {
     int materialIndex; // -1 if no material specified.
   };
 
+  struct MeshPart {
+    uint32_t indexStart;
+    uint32_t numIndices;
+    uint32_t materialIndex;
+  };
+
   struct AxisAlignedBounds {
     float max[3];
     float min[3];
   };
 
-  std::vector<Vertex> m_vertices;
   std::vector<MaterialGroup> m_groups;
+
+  std::vector<Vertex> m_vertices;
+  std::vector<uint32_t> m_indices;
+  std::vector<MeshPart> m_meshParts;
+
   std::vector<Material> m_materials;
   AxisAlignedBounds m_bounds;
 

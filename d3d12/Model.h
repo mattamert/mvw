@@ -7,10 +7,13 @@
 #include <d3d12.h>
 #include <wrl/client.h>  // For ComPtr
 
+#include <vector>
+
 class D3D12Renderer;
 
+// TODO: Make it a struct.
 class Model {
- private:
+public:
   struct Group {
     Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
     D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
@@ -21,11 +24,30 @@ class Model {
     DescriptorAllocation m_srvDescriptor;
   };
 
+  struct Material {
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
+    DescriptorAllocation m_srvDescriptor;
+  };
+
+  Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBuffer;
+  D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+
   Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-  std::vector<Group> m_groups;
+
+  // For now, just use the ObjFileData::MeshPart type, though ideally we'd want to not rely on it here.
+  std::vector<ObjFileData::MeshPart> m_meshParts;
+  std::vector<Material> m_materials;
 
   ObjFileData::AxisAlignedBounds m_bounds;
+
+  std::vector<Group> m_groups;
+
+  void Model::Init(D3D12Renderer* renderer,
+                   const std::vector<ObjFileData::Vertex>& vertices,
+                   const std::vector<uint32_t>& indices,
+                   const std::vector<ObjFileData::MeshPart>& meshParts,
+                   const std::vector<ObjFileData::Material>& materials);
 
   void Init(D3D12Renderer* renderer,
             const std::vector<ObjFileData::Vertex>& vertices,

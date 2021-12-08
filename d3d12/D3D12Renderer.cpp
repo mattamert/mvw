@@ -168,13 +168,19 @@ void D3D12Renderer::RunShadowPass(Scene& scene) {
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   m_cl->IASetVertexBuffers(0, 1, &scene.GetObj().model.GetVertexBufferView());
+  m_cl->IASetIndexBuffer(&scene.GetObj().model.m_indexBufferView);
 
-  for (size_t i = 0; i < scene.GetObj().model.GetNumberOfGroups(); ++i) {
+  for (size_t i = 0; i < scene.GetObj().model.m_meshParts.size(); ++i) {
     // TODO: Eventually we will want to reference the texture in the shadow pass, so that we can
     // accurately clip pixels that are fully transparent.
     // m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
-    m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
-    m_cl->DrawIndexedInstanced(scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
+    //m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
+
+    uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
+    uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
+    //m_cl->DrawIndexedInstanced(scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
+    m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
+                               /*startInstanceLocation*/ 0);
   }
 }
 
@@ -226,6 +232,7 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   m_cl->IASetVertexBuffers(0, 1, &scene.GetObj().model.GetVertexBufferView());
+  m_cl->IASetIndexBuffer(&scene.GetObj().model.m_indexBufferView);
 
   CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -242,15 +249,20 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
 
   m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
 
-  for (size_t i = 0; i < scene.GetObj().model.GetNumberOfGroups(); ++i) {
+  for (size_t i = 0; i < scene.GetObj().model.m_meshParts.size(); ++i) {
     DescriptorAllocation textureSRVDescriptor =
         m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
-    m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart, scene.GetObj().model.GetTextureDescriptorHandle(i),
-                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    m_device->CopyDescriptorsSimple(
+        1, textureSRVDescriptor.cpuStart,
+        scene.GetObj().model.m_materials[scene.GetObj().model.m_meshParts[i].materialIndex].m_srvDescriptor.cpuStart,
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
 
-    m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
-    m_cl->DrawIndexedInstanced(scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
+    uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
+    uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
+    //m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
+    m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
+                               /*startInstanceLocation*/ 0);
   }
 
   shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
