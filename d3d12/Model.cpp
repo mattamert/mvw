@@ -70,64 +70,6 @@ void Model::Init(D3D12Renderer* renderer,
   renderer->ExecuteBarriers(barriers.size(), barriers.data());
 }
 
-void Model::Init(D3D12Renderer* renderer,
-                 const std::vector<ObjFileData::Vertex>& vertices,
-                 const std::vector<ObjFileData::MaterialGroup>& objGroups,
-                 const std::vector<ObjFileData::Material>& materials) {
-  std::vector<CD3DX12_RESOURCE_BARRIER> barriers;
-  barriers.reserve(1 + 2 * objGroups.size());  // TODO: update the estimated size when we handle multiple groups with the
-                                               //       same texture data correctly.
-
-  // Upload the vertex data.
-  const size_t vertexBufferSize = vertices.size() * sizeof(ObjFileData::Vertex);
-  m_vertexBuffer = renderer->AllocateAndUploadBufferData(vertices.data(), vertexBufferSize);
-  barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST,
-                                                          D3D12_RESOURCE_STATE_GENERIC_READ));
-
-  m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-  m_vertexBufferView.SizeInBytes = vertexBufferSize;
-  m_vertexBufferView.StrideInBytes = sizeof(ObjFileData::Vertex);
-
-  // Upload each object group.
-  // TODO: We need to upload the textures in a separate step; multiple groups could have the same texture.
-  m_groups.resize(objGroups.size());
-  for (size_t i = 0; i < objGroups.size(); ++i) {
-    const ObjFileData::MaterialGroup& objGroup = objGroups[i];
-    Model::Group& modelGroup = m_groups[i];
-
-    // Upload the index data.
-    const size_t indexBufferSize = objGroup.indices.size() * sizeof(uint32_t);
-    modelGroup.m_indexBuffer = renderer->AllocateAndUploadBufferData(objGroup.indices.data(), indexBufferSize);
-    barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
-        modelGroup.m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-
-    modelGroup.m_numIndices = objGroup.indices.size();
-    modelGroup.m_indexBufferView.BufferLocation = modelGroup.m_indexBuffer->GetGPUVirtualAddress();
-    modelGroup.m_indexBufferView.SizeInBytes = indexBufferSize;
-    modelGroup.m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-
-    // TODO: We should check if we've already uploaded the file, and then just use that one.
-    //       This will get much more relevant when we factor in other of mtl's maps.
-    modelGroup.m_texture = nullptr;
-    if (objGroup.materialIndex >= 0) {
-      const ObjFileData::Material& material = materials[objGroup.materialIndex];
-      if (std::filesystem::exists(material.diffuseMap.file)) {
-        Image img;
-        HR(Image::LoadImageFile(material.diffuseMap.file.wstring(), &img));
-
-        // Upload the texture.
-        modelGroup.m_texture = renderer->AllocateAndUploadTextureData(img.data.data(), img.format, img.bytesPerPixel,
-                                                                      img.width, img.height,
-                                                                      /*out*/ &modelGroup.m_srvDescriptor);
-        barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
-            modelGroup.m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
-      }
-    }
-  }
-
-  renderer->ExecuteBarriers(barriers.size(), barriers.data());
-}
-
 void Model::InitCube(D3D12Renderer* renderer) {
   std::vector<ObjFileData::Vertex> vertices = {
       // +x direction
@@ -185,16 +127,15 @@ void Model::InitCube(D3D12Renderer* renderer) {
     m_bounds.min[i] = -1.0;
   }
 
-  std::vector<ObjFileData::MaterialGroup> group(1);
-  group[0].indices = std::move(indices);
-  group[0].materialIndex = -1;
+  std::vector<ObjFileData::MeshPart> meshParts(1);
+  meshParts[0].indexStart = 0;
+  meshParts[0].numIndices = indices.size();
+  meshParts[0].materialIndex = -1;
 
-  // TODO: Pretty sure this will crash without a material. Should probably fix (and clean everything
-  // up...).
+  // TODO: Pretty sure this will crash without a material. Should probably generate a generic material.
+  //       (Or handle the case better where we don't have a material).
   std::vector<ObjFileData::Material> materials;
-
-  // TODO: Generate generic material.
-  Init(renderer, vertices, group, materials);
+  Init(renderer, vertices, indices, meshParts, materials);
 }
 
 bool Model::InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName) {
@@ -215,20 +156,4 @@ D3D12_VERTEX_BUFFER_VIEW& Model::GetVertexBufferView() {
 
 const ObjFileData::AxisAlignedBounds& Model::GetBounds() const {
   return m_bounds;
-}
-
-size_t Model::GetNumberOfGroups() {
-  return m_groups.size();
-}
-
-D3D12_INDEX_BUFFER_VIEW& Model::GetIndexBufferView(size_t groupIndex) {
-  return m_groups[groupIndex].m_indexBufferView;
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE Model::GetTextureDescriptorHandle(size_t groupIndex) {
-  return m_groups[groupIndex].m_srvDescriptor.cpuStart;
-}
-
-size_t Model::GetNumIndices(size_t groupIndex) {
-  return m_groups[groupIndex].m_numIndices;
 }

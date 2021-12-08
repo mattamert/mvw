@@ -174,11 +174,9 @@ void D3D12Renderer::RunShadowPass(Scene& scene) {
     // TODO: Eventually we will want to reference the texture in the shadow pass, so that we can
     // accurately clip pixels that are fully transparent.
     // m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
-    //m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
 
     uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
     uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
-    //m_cl->DrawIndexedInstanced(scene.GetObj().model.GetNumIndices(i), 1, 0, 0, 0);
     m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
                                /*startInstanceLocation*/ 0);
   }
@@ -252,6 +250,8 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
   for (size_t i = 0; i < scene.GetObj().model.m_meshParts.size(); ++i) {
     DescriptorAllocation textureSRVDescriptor =
         m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+
+    // TODO: Oh wow clean this up!!!!
     m_device->CopyDescriptorsSimple(
         1, textureSRVDescriptor.cpuStart,
         scene.GetObj().model.m_materials[scene.GetObj().model.m_meshParts[i].materialIndex].m_srvDescriptor.cpuStart,
@@ -260,7 +260,6 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
 
     uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
     uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
-    //m_cl->IASetIndexBuffer(&scene.GetObj().model.GetIndexBufferView(i));
     m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
                                /*startInstanceLocation*/ 0);
   }

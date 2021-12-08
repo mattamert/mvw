@@ -116,12 +116,9 @@ class ObjFileData {
     float min[3];
   };
 
-  std::vector<MaterialGroup> m_groups;
-
   std::vector<Vertex> m_vertices;
   std::vector<uint32_t> m_indices;
   std::vector<MeshPart> m_meshParts;
-
   std::vector<Material> m_materials;
   AxisAlignedBounds m_bounds;
 
