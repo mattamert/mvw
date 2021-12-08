@@ -11,7 +11,6 @@
 
 class D3D12Renderer;
 
-// TODO: Make it a struct.
 struct Model {
   struct Material {
     Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
@@ -23,11 +22,8 @@ struct Model {
   D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
   D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
-  // For now, just use the ObjFileData::MeshPart type, though ideally we'd want to not rely on it here.
   std::vector<ObjFileData::MeshPart> m_meshParts;
-
   std::vector<Material> m_materials;
-
   ObjFileData::AxisAlignedBounds m_bounds;
 
   void Model::Init(D3D12Renderer* renderer,

@@ -111,8 +111,8 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
-  RunShadowPass(scene);
-  RunColorPass(scene);
+  RunShadowPass(scene.m_object);
+  RunColorPass(scene.m_camera, scene.m_object);
 
   CD3DX12_RESOURCE_BARRIER preCopyResourceBarriers[] = {
       CD3DX12_RESOURCE_BARRIER::Transition(m_window.GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT,
@@ -138,7 +138,7 @@ void D3D12Renderer::DrawScene(Scene& scene) {
 }
 
 // Expects that the shadow map resource is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
-void D3D12Renderer::RunShadowPass(Scene& scene) {
+void D3D12Renderer::RunShadowPass(const Object& object) {
   m_cl->SetPipelineState(m_shadowMapPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
 
@@ -149,7 +149,7 @@ void D3D12Renderer::RunShadowPass(Scene& scene) {
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, shadowMapPerFrameConstantBuffer);
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMFLOAT4X4 modelTransform4x4 = scene.GetObj().GenerateModelTransform4x4();
+  DirectX::XMFLOAT4X4 modelTransform4x4 = object.GenerateModelTransform4x4();
   D3D12_GPU_VIRTUAL_ADDRESS shadowMapModelTransformConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, shadowMapModelTransformConstantBuffer);
@@ -167,23 +167,19 @@ void D3D12Renderer::RunShadowPass(Scene& scene) {
   m_cl->ClearDepthStencilView(shadowMapDSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &scene.GetObj().model.GetVertexBufferView());
-  m_cl->IASetIndexBuffer(&scene.GetObj().model.m_indexBufferView);
+  m_cl->IASetVertexBuffers(0, 1, &object.model.m_vertexBufferView);
+  m_cl->IASetIndexBuffer(&object.model.m_indexBufferView);
 
-  for (size_t i = 0; i < scene.GetObj().model.m_meshParts.size(); ++i) {
+  for (const auto& meshPart : object.model.m_meshParts) {
     // TODO: Eventually we will want to reference the texture in the shadow pass, so that we can
-    // accurately clip pixels that are fully transparent.
-    // m_cl->SetGraphicsRootDescriptorTable(2, m_object.model.GetTextureDescriptorHandle(i));
-
-    uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
-    uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
-    m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
+    //       accurately clip pixels that are fully transparent.
+    m_cl->DrawIndexedInstanced(meshPart.numIndices, /*instanceCount*/ 1, meshPart.indexStart, /*baseVertexLocation*/ 0,
                                /*startInstanceLocation*/ 0);
   }
 }
 
 // Expects that the shadow map resouce is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
-void D3D12Renderer::RunColorPass(Scene& scene) {
+void D3D12Renderer::RunColorPass(const PinholeCamera& camera, const Object& object) {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRTVDescriptorHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthBuffer.GetDSVDescriptorHandle();
@@ -193,14 +189,14 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
 
   // Set up the constant buffer for the per-frame data.
   ColorPass::PerFrameData perFrameData;
-  perFrameData.projectionViewTransform = scene.GetCamera().GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  perFrameData.projectionViewTransform = camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
   perFrameData.shadowMapProjectionViewTransform = m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
   perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, colorPassPerFrameConstantBuffer);
 
-  DirectX::XMMATRIX modelTransform = scene.GetObj().GenerateModelTransform();
+  DirectX::XMMATRIX modelTransform = object.GenerateModelTransform();
   DirectX::XMMATRIX modelTransformModified = modelTransform;
   modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
   DirectX::XMMATRIX modelTransformInverseTranspose =
@@ -229,8 +225,8 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
   m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  m_cl->IASetVertexBuffers(0, 1, &scene.GetObj().model.GetVertexBufferView());
-  m_cl->IASetIndexBuffer(&scene.GetObj().model.m_indexBufferView);
+  m_cl->IASetVertexBuffers(0, 1, &object.model.m_vertexBufferView);
+  m_cl->IASetIndexBuffer(&object.model.m_indexBufferView);
 
   CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -247,20 +243,15 @@ void D3D12Renderer::RunColorPass(Scene& scene) {
 
   m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
 
-  for (size_t i = 0; i < scene.GetObj().model.m_meshParts.size(); ++i) {
+  for (const auto& meshPart : object.model.m_meshParts) {
     DescriptorAllocation textureSRVDescriptor =
         m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
 
-    // TODO: Oh wow clean this up!!!!
-    m_device->CopyDescriptorsSimple(
-        1, textureSRVDescriptor.cpuStart,
-        scene.GetObj().model.m_materials[scene.GetObj().model.m_meshParts[i].materialIndex].m_srvDescriptor.cpuStart,
-        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    const Model::Material& material = object.model.m_materials[meshPart.materialIndex];
+    m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart, material.m_srvDescriptor.cpuStart,
+                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
-
-    uint32_t indexStart = scene.GetObj().model.m_meshParts[i].indexStart;
-    uint32_t numIndices = scene.GetObj().model.m_meshParts[i].numIndices;
-    m_cl->DrawIndexedInstanced(numIndices, /*instanceCount*/ 1, indexStart, /*baseVertexLocation*/ 0,
+    m_cl->DrawIndexedInstanced(meshPart.numIndices, /*instanceCount*/ 1, meshPart.indexStart, /*baseVertexLocation*/ 0,
                                /*startInstanceLocation*/ 0);
   }
 

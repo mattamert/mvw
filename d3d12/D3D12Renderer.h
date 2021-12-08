@@ -36,7 +36,7 @@ class D3D12Renderer {
 
   // Shadow map stuff.
   DepthBufferTexture m_shadowMap;
-  OrthographicCamera m_shadowMapCamera;
+  OrthographicCamera m_shadowMapCamera; // Should probably be in the Scene structure.
 
   // Pass data.
   ColorPass m_colorPass;
@@ -55,8 +55,8 @@ class D3D12Renderer {
   void InitializeFenceObjects();
   void InitializeShadowMapObjects();
 
-  void RunShadowPass(Scene& scene);
-  void RunColorPass(Scene& scene);
+  void RunShadowPass(const Object& object);
+  void RunColorPass(const PinholeCamera& camera, const Object& object);
 
 public:
   void Initialize(HWND hwnd);

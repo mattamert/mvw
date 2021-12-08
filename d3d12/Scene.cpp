@@ -30,11 +30,3 @@ void Scene::TickAnimations() {
   double progress = Animation::TickAnimation(m_objectRotationAnimation);
   m_object.rotationY = progress * 2 * 3.14159265;
 }
-
-Object& Scene::GetObj() {
-  return m_object;
-}
-
-const PinholeCamera& Scene::GetCamera() const {
-  return m_camera;
-}
