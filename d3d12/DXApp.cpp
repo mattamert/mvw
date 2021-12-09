@@ -52,6 +52,7 @@ bool DXApp::HandleMessages() {
         // refers to. Instead, it seems to rely on the application to have kept track of it, and assumes that there can
         // never be 2 pointer buttons held down at the same time. (This largely goes against what the documentation
         // implicitly says though).
+        // FUTURE NOTE: Please look into POINTER_BUTTON_CHANGE_TYPE, and the POINTER_INFO structure.
         //
         // Also, from the disclaimer on the documentation:
         //    When a window loses capture of a pointer and it receives the WM_POINTERCAPTURECHANGED notification, it
@@ -80,6 +81,15 @@ bool DXApp::HandleMessages() {
         int x = GET_X_LPARAM(msg.lParam);
         int y = GET_Y_LPARAM(msg.lParam);
         OnPointerUpdate(x, y);
+        break;
+      }
+
+      case WM_POINTERWHEEL: {
+        // MEGA HACK ALERT!
+        // See the comment in WindowProxy.cpp.
+        int wheelDelta = msg.lParam;
+        float wheelDeltaNormalized = (float)wheelDelta / WHEEL_DELTA;
+        OnPointerWheel(wheelDeltaNormalized);
         break;
       }
 
@@ -146,4 +156,8 @@ void DXApp::OnPointerUpdate(int x, int y) {
 
     m_scene.m_camera.OnMouseDrag(deltaX, deltaY);
   }
+}
+
+void DXApp::OnPointerWheel(float wheelDelta) {
+  m_scene.m_camera.OnMouseWheel(wheelDelta);
 }

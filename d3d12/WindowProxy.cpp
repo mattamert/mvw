@@ -34,6 +34,26 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
       }
       return 0;
 
+    case WM_POINTERWHEEL:
+      if (handler != nullptr) {
+        UINT32 pointerId = GET_POINTERID_WPARAM(msg.wParam);
+        POINTER_INFO pointerInfo;
+        if (GetPointerInfo(pointerId, &pointerInfo)) {
+          // MEGA HACK ALERT!
+          // The other thread cannot call GetPointerInfo when it processes a pointer message. This is because Windows
+          // keeps track of when these messages were handled, and that information is only available when the WndProc is
+          // processing it (which is right here).
+          // We can only get the mouse wheel delta from GetPointerInfo. So therefore, we need to somehow get that
+          // information to the other thread in the message.
+          // Ultimately, we need to create a platform-agnostic Message that can be sent to the other thread, instead of just MSG.
+          // Until then, though, let's just store it in the lparam, since we don't need the mouse position anyways.
+          msg.lParam = pointerInfo.InputData;
+        }
+
+        handler->PushMessage(msg);
+      }
+      return 0;
+
     case WM_DESTROY:
       if (handler != nullptr) {
         handler->PushMessage(msg);

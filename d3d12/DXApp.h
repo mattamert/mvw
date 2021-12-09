@@ -41,4 +41,5 @@ class DXApp {
   void OnLeftButtonDown(int x, int y);
   void OnLeftButtonUp(int x, int y);
   void OnPointerUpdate(int x, int y);
+  void OnPointerWheel(float wheelDelta);
 };

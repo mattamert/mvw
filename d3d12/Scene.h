@@ -15,9 +15,7 @@ public:
   std::string m_objFilename;
   Object m_object;
   Animation m_objectRotationAnimation;
-
   ArcballCameraController m_camera;
-  //PinholeCamera m_camera;
 
   void Initialize(const std::string& objFilename, D3D12Renderer* renderer);
   void TickAnimations();

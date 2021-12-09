@@ -80,6 +80,11 @@ void ArcballCameraController::OnMouseDrag(int deltaX, int deltaY) {
   m_rotationYInDegrees = std::clamp(m_rotationYInDegrees, 10.f, 170.f);
 }
 
+void ArcballCameraController::OnMouseWheel(float wheelDelta) {
+  m_distance -= 0.1f * wheelDelta;
+  m_distance = std::max(0.1f, m_distance); // Minimum of 0.1 distance.
+}
+
 PinholeCamera ArcballCameraController::GetPinholeCamera() const {
   const float pi = 3.14159265f;
   float rotationXInRadians = m_rotationXInDegrees * pi / 180.f;

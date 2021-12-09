@@ -34,5 +34,6 @@ struct ArcballCameraController {
   float m_distance;
 
   void OnMouseDrag(int deltaX, int deltaY);
-  PinholeCamera GetPinholeCamera() const;
+  void OnMouseWheel(float wheelDelta);
+  PinholeCamera GetPinholeCamera() const; // This is kinda jank, but it works for now..
 };
