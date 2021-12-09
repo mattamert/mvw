@@ -613,7 +613,8 @@ class ObjFileParser {
   int FindMaterialIndex(const std::string& materialName);
 
   void StartNewMeshPart(int materialIndex = -1);
-  bool AddVerticesFromFace(const std::vector<Indices>& face);
+  void AddVerticesFromFace(Indices face[3]);
+  void AddVerticesFromFace_GenerateNormals(Indices face[3]);
   void CalculateAxisAlignedBounds();
 
  public:
@@ -661,13 +662,15 @@ void ObjFileParser::StartNewMeshPart(int materialIndex) {
   m_currentMeshPart->numIndices = 0;
 }
 
-bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
-  // TODO: Generate normals if needed.
-  std::vector<uint32_t> vertexIndices;
-  for (const Indices indices : face) {
+void ObjFileParser::AddVerticesFromFace(Indices face[3]) {
+  if (!m_currentMeshPart) {
+    std::cerr << "Warning: file contains vertices that do not have a material assigned to them." << std::endl;
+    StartNewMeshPart();
+  }
+
+  for (size_t i = 0; i < 3; ++i) {
+    const Indices& indices = face[i];
     assert(indices.posIndex > 0);
-    // TODO: We should be able to handle the case where we don't have texture coordinates.
-    // Just use (0, 0).
     assert(indices.texCoordIndex > 0);
     assert(indices.normalIndex > 0);
 
@@ -690,33 +693,62 @@ bool ObjFileParser::AddVerticesFromFace(const std::vector<Indices>& face) {
 
       size_t vertexIndex = m_vertices.size() - 1;
       m_mapIndicesToVertexIndex[indices] = vertexIndex;
-      vertexIndices.push_back((uint32_t)vertexIndex);
+      m_indices.push_back((uint32_t)vertexIndex);
     } else {
-      vertexIndices.push_back(iter->second);
+      m_indices.push_back(iter->second);
     }
   }
 
+  m_currentMeshPart->numIndices += 3;
+}
+
+void ObjFileParser::AddVerticesFromFace_GenerateNormals(Indices face[3]) {
   if (!m_currentMeshPart) {
     std::cerr << "Warning: file contains vertices that do not have a material assigned to them." << std::endl;
     StartNewMeshPart();
   }
 
-  assert(vertexIndices.size() >= 3);
-  assert(m_currentMeshPart != nullptr);
+  const Position& pos0 = m_positions[face[0].posIndex - 1];
+  const Position& pos1 = m_positions[face[1].posIndex - 1];
+  const Position& pos2 = m_positions[face[2].posIndex - 1];
 
-  uint32_t base = vertexIndices[0];
-  uint32_t prev = vertexIndices[1];
-  for (size_t i = 2; i < vertexIndices.size(); ++i) {
-    uint32_t curr = vertexIndices[i];
-    m_indices.push_back(base);
-    m_indices.push_back(prev);
-    m_indices.push_back(curr);
-    m_currentMeshPart->numIndices += 3;
+  float vec0[3] = {pos1.x - pos0.x, pos1.y - pos0.y, pos1.z - pos0.z};
+  float vec1[3] = {pos2.x - pos0.x, pos2.y - pos0.y, pos2.z - pos0.z};
 
-    prev = curr;
+  float crossProduct[3] = {
+    vec0[1] * vec1[2] - vec0[2] * vec1[1],
+    vec0[2] * vec1[0] - vec0[0] * vec1[2],
+    vec0[0] * vec1[1] - vec0[1] * vec1[0],
+  };
+
+  float magnitude = std::sqrt(crossProduct[0] * crossProduct[0] + crossProduct[1] * crossProduct[1] +
+                              crossProduct[2] * crossProduct[2]);
+
+  float normal[3] = {crossProduct[0] / magnitude, crossProduct[1] / magnitude, crossProduct[2] / magnitude};
+  for (size_t i = 0; i < 3; ++i) {
+    const Indices& indices = face[i];
+    assert(indices.posIndex > 0);
+    assert(indices.texCoordIndex > 0);
+
+    const Position& pos = m_positions[indices.posIndex - 1];
+    const TexCoord& texCoord = m_texCoords[indices.texCoordIndex - 1];
+
+    ObjFileData::Vertex vertex;
+    vertex.pos[0] = pos.x;
+    vertex.pos[1] = pos.y;
+    vertex.pos[2] = pos.z;
+    vertex.texCoord[0] = texCoord.u;
+    vertex.texCoord[1] = 1.0 - texCoord.v;
+    vertex.normal[0] = normal[0];
+    vertex.normal[1] = normal[1];
+    vertex.normal[2] = normal[2];
+    m_vertices.emplace_back(vertex);
+
+    size_t vertexIndex = m_vertices.size() - 1;
+    m_indices.push_back((uint32_t)vertexIndex);
   }
 
-  return true;
+  m_currentMeshPart->numIndices += 3;
 }
 
 static bool ResolveRelativeIndex(long long index, size_t referenceSize, unsigned long long* resolvedIndex) {
@@ -788,10 +820,8 @@ bool ObjFileParser::Init(const std::string& filePath) {
       } break;
 
       case ObjDeclarationType::Face: {
-        // TODO: We should probably specialize this function for 3/4 vertex faces in order to avoid
-        // heap allocations when parsing faces.
-        std::vector<Indices> indices;
-        for (;;) {
+        Indices indices[3];
+        for (size_t i = 0;; ++i) {
           long long posIndex = 0;
           long long texCoordIndex = 0;
           long long normalIndex = 0;
@@ -806,18 +836,21 @@ bool ObjFileParser::Init(const std::string& filePath) {
             }
           }
 
-          Indices curr;
-          parseSucceeded &= ResolveRelativeIndex(posIndex, m_positions.size(), &curr.posIndex);
-          parseSucceeded &= ResolveRelativeIndex(texCoordIndex, m_texCoords.size(), &curr.texCoordIndex);
-          parseSucceeded &= ResolveRelativeIndex(normalIndex, m_normals.size(), &curr.normalIndex);
-
-          indices.emplace_back(curr);
+          if (i < 3) {
+            Indices& curr = indices[i];
+            parseSucceeded &= ResolveRelativeIndex(posIndex, m_positions.size(), &curr.posIndex);
+            parseSucceeded &= ResolveRelativeIndex(texCoordIndex, m_texCoords.size(), &curr.texCoordIndex);
+            parseSucceeded &= ResolveRelativeIndex(normalIndex, m_normals.size(), &curr.normalIndex);
+          } else {
+            std::cerr << "Line " << currentLineNumber
+                      << ": Warning: this parser doesn't support faces with 4+ vertices." << std::endl;
+          }
         }
 
-        if (indices.size() < 3) {
-          parseSucceeded = false;
-        } else if (parseSucceeded) {
-          parseSucceeded &= AddVerticesFromFace(indices);
+        if (indices[0].normalIndex == 0 || indices[1].normalIndex == 0 || indices[2].normalIndex == 0) {
+          AddVerticesFromFace_GenerateNormals(indices);
+        } else {
+          AddVerticesFromFace(indices);
         }
       } break;
 
