@@ -29,7 +29,7 @@ class DXApp {
   bool m_isInitialized = false;
 
  public:
-  void Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, std::string filename);
+  void Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, std::string filename, bool isTownscaper);
   bool IsInitialized() const;
 
   bool HandleMessages();

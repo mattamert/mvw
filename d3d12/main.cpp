@@ -26,6 +26,10 @@ void RunMessageLoop() {
 
 #ifdef USE_CONSOLE_SUBSYSTEM
 
+void EmitUsageMessage() {
+  std::cerr << "Usage: d3d12_renderer.exe [-townscaper] <obj file>" << std::endl;
+}
+
 int main(int argc, char** argv) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
@@ -33,21 +37,34 @@ int main(int argc, char** argv) {
     (void)EnableMouseInPointer(TRUE);
   }
 
-  if (argc != 2) {
-    std::cerr << "Usage: d3d12_renderer.exe <obj file>" << std::endl;
+  if (argc < 2) {
+    EmitUsageMessage();
     return 1;
   }
 
-  std::string objFilename = std::string(argv[1]);
+  std::string objFilename;
+  bool isTownscaper = false;
+  for (size_t i = 1; i < argc; ++i) {
+    std::string arg(argv[i]);
+    if (arg == "-townscaper") {
+      isTownscaper = true;
+    } else if (objFilename.empty()) {
+      objFilename = std::move(arg);
+    } else {
+      EmitUsageMessage();
+      return 1;
+    }
+  }
+
   if (!std::filesystem::exists(objFilename)) {
-    std::cerr << "File not found." << std::endl;
+    std::cerr << "File '" << objFilename << "' not found." << std::endl;
     return 1;
   }
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
       WindowProxy proxy;
-      proxy.Initialize(std::move(objFilename));
+      proxy.Initialize(std::move(objFilename), isTownscaper);
       RunMessageLoop();
     }
     CoUninitialize();

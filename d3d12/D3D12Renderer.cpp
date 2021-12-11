@@ -104,8 +104,14 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
-  RunShadowPass(scene.m_object);
-  RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_object);
+  if (scene.m_isTownscaper) {
+    // TODO: do Townscaper-specific stuff.
+    RunShadowPass(scene.m_shadowMapCamera, scene.m_object);
+    RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
+  } else {
+    RunShadowPass(scene.m_shadowMapCamera, scene.m_object);
+    RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
+  }
 
   CD3DX12_RESOURCE_BARRIER preCopyResourceBarriers[] = {
       CD3DX12_RESOURCE_BARRIER::Transition(m_window.GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT,
@@ -131,12 +137,12 @@ void D3D12Renderer::DrawScene(Scene& scene) {
 }
 
 // Expects that the shadow map resource is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
-void D3D12Renderer::RunShadowPass(const Object& object) {
+void D3D12Renderer::RunShadowPass(const OrthographicCamera& shadowMapCamera, const Object& object) {
   m_cl->SetPipelineState(m_shadowMapPass.GetPipelineState());
   m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 = m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+  DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 = shadowMapCamera.GenerateViewPerspectiveTransform4x4();
   D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerFrameConstantBuffer = m_constantBufferAllocator.AllocateAndUpload(
       sizeof(shadowMapViewPerspective4x4), &shadowMapViewPerspective4x4, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, shadowMapPerFrameConstantBuffer);
@@ -172,7 +178,9 @@ void D3D12Renderer::RunShadowPass(const Object& object) {
 }
 
 // Expects that the shadow map resouce is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
-void D3D12Renderer::RunColorPass(const PinholeCamera& camera, const Object& object) {
+void D3D12Renderer::RunColorPass(const PinholeCamera& camera,
+                                 const OrthographicCamera& shadowMapCamera,
+                                 const Object& object) {
   ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRTVDescriptorHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthBuffer.GetDSVDescriptorHandle();
@@ -183,8 +191,8 @@ void D3D12Renderer::RunColorPass(const PinholeCamera& camera, const Object& obje
   // Set up the constant buffer for the per-frame data.
   ColorPass::PerFrameData perFrameData;
   perFrameData.projectionViewTransform = camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
-  perFrameData.shadowMapProjectionViewTransform = m_shadowMapCamera.GenerateViewPerspectiveTransform4x4();
-  perFrameData.lightDirection = m_shadowMapCamera.GetLightDirection();
+  perFrameData.shadowMapProjectionViewTransform = shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+  perFrameData.lightDirection = shadowMapCamera.GetLightDirection();
   D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, colorPassPerFrameConstantBuffer);

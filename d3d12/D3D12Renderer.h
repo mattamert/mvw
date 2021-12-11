@@ -54,8 +54,8 @@ class D3D12Renderer {
   void InitializeFenceObjects();
   void InitializeShadowMapObjects();
 
-  void RunShadowPass(const Object& object);
-  void RunColorPass(const PinholeCamera& camera, const Object& object);
+  void RunShadowPass(const OrthographicCamera& shadowCamera, const Object& object);
+  void RunColorPass(const PinholeCamera& camera, const OrthographicCamera& shadowCamera, const Object& object);
 
 public:
   void Initialize(HWND hwnd);

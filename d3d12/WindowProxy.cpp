@@ -127,13 +127,13 @@ void ShowDXWindow(HWND hwnd) {
 
 }  // namespace
 
-void WindowProxy::Initialize(std::string filename) {
+void WindowProxy::Initialize(std::string filename, bool isTownscaper) {
   m_messageQueue = std::make_shared<MessageQueue>();
 
   HWND hwnd = CreateDXWindow(this, L"mvw", 640, 480);
 
   std::unique_ptr<DXApp> app = std::make_unique<DXApp>();
-  app->Initialize(m_messageQueue, hwnd, std::move(filename));
+  app->Initialize(m_messageQueue, hwnd, std::move(filename), isTownscaper);
 
   ShowDXWindow(hwnd);
 

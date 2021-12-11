@@ -15,7 +15,7 @@ class WindowProxy {
  public:
   WindowProxy() = default;
 
-  void Initialize(std::string filename);
+  void Initialize(std::string filename, bool isTownscaper);
   void PushMessage(MSG msg);
   void WaitForRenderThreadToFinish();
 };

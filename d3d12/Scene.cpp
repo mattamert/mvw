@@ -2,9 +2,10 @@
 
 #include "d3d12/D3D12Renderer.h"
 
-void Scene::Initialize(const std::string& objFilename, D3D12Renderer* renderer) {
+void Scene::Initialize(const std::string& objFilename, bool isTownscaper, D3D12Renderer* renderer) {
   Model model;
   model.InitFromObjFile(renderer, objFilename);
+  m_isTownscaper = isTownscaper;
 
   const ObjFileData::AxisAlignedBounds& bounds = model.GetBounds();
   float width = std::abs(bounds.max[0] - bounds.min[0]);
