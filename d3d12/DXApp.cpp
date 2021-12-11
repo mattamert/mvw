@@ -103,7 +103,9 @@ bool DXApp::HandleMessages() {
 }
 
 void DXApp::ExecuteFrame() {
-  // TODO: Investigate if we should be handling the resize after the WaitForNextFrame.
+  // TODO: Investigate the ordering of all of this.
+  //       It might be a good idea to HandleResize *after* WaitForNextFrame.
+  //       It also might be a good idea to HandleMessages *after* WaitForNextFrame as well.
   if (m_hasPendingResize) {
     if (m_pendingClientWidth > 0 && m_pendingClientHeight > 0) {
       m_renderer.HandleResize(m_pendingClientWidth, m_pendingClientHeight);

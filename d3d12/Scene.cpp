@@ -22,6 +22,11 @@ void Scene::Initialize(const std::string& objFilename, D3D12Renderer* renderer) 
 
   m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
 
+  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
+  m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
+  m_shadowMapCamera.widthInWorldCoordinates = 1.5;
+  m_shadowMapCamera.heightInWorldCoordinates = 1.5;
+
   m_camera.m_arcballCenter = DirectX::XMFLOAT4(0.f, 0.f, 0.f, 1.f);
   m_camera.m_rotationXInDegrees = 0.f;
   m_camera.m_rotationYInDegrees = 90.f;

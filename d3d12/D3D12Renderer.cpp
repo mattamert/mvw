@@ -89,11 +89,6 @@ void D3D12Renderer::InitializeFenceObjects() {
 void D3D12Renderer::InitializeShadowMapObjects() {
   m_shadowMap.InitializeWithSRV(m_device.Get(), m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
                                 m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(), 2000, 2000);
-
-  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
-  m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
-  m_shadowMapCamera.widthInWorldCoordinates = 1.5;
-  m_shadowMapCamera.heightInWorldCoordinates = 1.5;
 }
 
 void D3D12Renderer::HandleResize(unsigned int width, unsigned int height) {
@@ -200,16 +195,17 @@ void D3D12Renderer::RunColorPass(const PinholeCamera& camera, const Object& obje
   DirectX::XMMATRIX modelTransformInverseTranspose =
       DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
 
+  // Set up the constant buffer for the per-object data.
   DirectX::XMFLOAT4X4 transforms4x4[2];
   DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
   // TODO: normals don't need the full 4x4, only 3x3. We should use XMStoreFloat3x3 instead.
   DirectX::XMStoreFloat4x4(&transforms4x4[1], modelTransformInverseTranspose);
 
-  // Set up the constant buffer for the per-object data.
   D3D12_GPU_VIRTUAL_ADDRESS colorPassModelTransformsConstantBuffer =
       m_constantBufferAllocator.AllocateAndUpload(sizeof(transforms4x4), transforms4x4, m_nextFenceValue);
   m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, colorPassModelTransformsConstantBuffer);
 
+  // Set up other necessary state.
   unsigned int width = m_window.GetWidth();
   unsigned int height = m_window.GetHeight();
   CD3DX12_VIEWPORT clientAreaViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));

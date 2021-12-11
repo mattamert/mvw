@@ -33,10 +33,9 @@ class D3D12Renderer {
   WindowSwapChain m_window;
   RenderTargetTexture m_renderTarget;
   DepthBufferTexture m_depthBuffer;
-
-  // Shadow map stuff.
+  
+  // Shadow Maps.
   DepthBufferTexture m_shadowMap;
-  OrthographicCamera m_shadowMapCamera; // Should probably be in the Scene structure.
 
   // Pass data.
   ColorPass m_colorPass;

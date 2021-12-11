@@ -15,6 +15,8 @@ public:
   std::string m_objFilename;
   Object m_object;
   Animation m_objectRotationAnimation;
+
+  OrthographicCamera m_shadowMapCamera;
   ArcballCameraController m_camera;
 
   void Initialize(const std::string& objFilename, D3D12Renderer* renderer);
