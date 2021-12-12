@@ -13,11 +13,15 @@ class ColorPass {
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
 
  public:
-  // TODO: Include other definition for PerObjectData (and for the buffers in ShadowMapPass).
   struct PerFrameData {
     DirectX::XMFLOAT4X4 projectionViewTransform;
     DirectX::XMFLOAT4X4 shadowMapProjectionViewTransform;
     DirectX::XMFLOAT4 lightDirection;
+  };
+
+  struct PerObjectData {
+    DirectX::XMFLOAT4X4 modelTransform;
+    DirectX::XMFLOAT4X4 modelTransformInverseTranspose;
   };
 
   void Initialize(ID3D12Device* device);
@@ -33,6 +37,14 @@ class ShadowMapPass {
   Microsoft::WRL::ComPtr<ID3DBlob> m_pixelShader;
 
  public:
+  struct PerFrameData {
+    DirectX::XMFLOAT4X4 projectionViewTransform;
+  };
+
+  struct PerObjectData {
+    DirectX::XMFLOAT4X4 worldTransform;
+  };
+
   void Initialize(ID3D12Device* device);
 
   ID3D12PipelineState* GetPipelineState();

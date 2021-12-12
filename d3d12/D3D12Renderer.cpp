@@ -142,16 +142,18 @@ void D3D12Renderer::RunShadowPass(const OrthographicCamera& shadowMapCamera, con
   m_cl->SetGraphicsRootSignature(m_shadowMapPass.GetRootSignature());
 
   // Set up the constant buffer for the per-frame data.
-  DirectX::XMFLOAT4X4 shadowMapViewPerspective4x4 = shadowMapCamera.GenerateViewPerspectiveTransform4x4();
-  D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerFrameConstantBuffer = m_constantBufferAllocator.AllocateAndUpload(
-      sizeof(shadowMapViewPerspective4x4), &shadowMapViewPerspective4x4, m_nextFenceValue);
-  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, shadowMapPerFrameConstantBuffer);
+  ShadowMapPass::PerFrameData perFrameData;
+  perFrameData.projectionViewTransform = shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+  D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerFrameBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ShadowMapPass::PerFrameData), &perFrameData, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, shadowMapPerFrameBuffer);
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMFLOAT4X4 modelTransform4x4 = object.GenerateModelTransform4x4();
-  D3D12_GPU_VIRTUAL_ADDRESS shadowMapModelTransformConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(modelTransform4x4), &modelTransform4x4, m_nextFenceValue);
-  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, shadowMapModelTransformConstantBuffer);
+  ShadowMapPass::PerObjectData perObjectData;
+  perObjectData.worldTransform = object.GenerateModelTransform4x4();
+  D3D12_GPU_VIRTUAL_ADDRESS shadowMapPerObjectBuffer = m_constantBufferAllocator.AllocateAndUpload(
+      sizeof(ShadowMapPass::PerObjectData), &perObjectData, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, shadowMapPerObjectBuffer);
 
   unsigned int shadowMapWidth = m_shadowMap.GetWidth();
   unsigned int shadowMapHeight = m_shadowMap.GetHeight();
@@ -204,14 +206,13 @@ void D3D12Renderer::RunColorPass(const PinholeCamera& camera,
       DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
 
   // Set up the constant buffer for the per-object data.
-  DirectX::XMFLOAT4X4 transforms4x4[2];
-  DirectX::XMStoreFloat4x4(&transforms4x4[0], modelTransform);
-  // TODO: normals don't need the full 4x4, only 3x3. We should use XMStoreFloat3x3 instead.
-  DirectX::XMStoreFloat4x4(&transforms4x4[1], modelTransformInverseTranspose);
-
-  D3D12_GPU_VIRTUAL_ADDRESS colorPassModelTransformsConstantBuffer =
-      m_constantBufferAllocator.AllocateAndUpload(sizeof(transforms4x4), transforms4x4, m_nextFenceValue);
-  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, colorPassModelTransformsConstantBuffer);
+  // TODO: we only need 3x3 for the inverse transpose matrix; we should use XMStoreFloat3x3 instead.
+  ColorPass::PerObjectData perObjectData;
+  DirectX::XMStoreFloat4x4(&perObjectData.modelTransform, modelTransform);
+  DirectX::XMStoreFloat4x4(&perObjectData.modelTransformInverseTranspose, modelTransformInverseTranspose);
+  D3D12_GPU_VIRTUAL_ADDRESS colorPassPerObjectBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerObjectData), &perObjectData, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, colorPassPerObjectBuffer);
 
   // Set up other necessary state.
   unsigned int width = m_window.GetWidth();
