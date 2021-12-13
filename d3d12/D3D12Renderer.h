@@ -40,6 +40,9 @@ class D3D12Renderer {
   // Pass data.
   ColorPass m_colorPass;
   ShadowMapPass m_shadowMapPass;
+  Microsoft::WRL::ComPtr<ID3D12RootSignature> m_townscaperRootSignature;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Buildings;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Generic;
 
   // Fence stuff.
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
@@ -53,6 +56,10 @@ class D3D12Renderer {
   void InitializePerPassObjects();
   void InitializeFenceObjects();
   void InitializeShadowMapObjects();
+
+  void Townscaper_RunColorPass(const PinholeCamera& camera,
+                                 const OrthographicCamera& shadowMapCamera,
+                                 const Object& object);
 
   void RunShadowPass(const OrthographicCamera& shadowCamera, const Object& object);
   void RunColorPass(const PinholeCamera& camera, const OrthographicCamera& shadowCamera, const Object& object);

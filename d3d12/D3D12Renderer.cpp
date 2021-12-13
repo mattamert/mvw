@@ -77,6 +77,12 @@ void D3D12Renderer::InitializePerWindowObjects(HWND hwnd) {
 void D3D12Renderer::InitializePerPassObjects() {
   m_colorPass.Initialize(m_device.Get());
   m_shadowMapPass.Initialize(m_device.Get());
+
+  m_townscaperRootSignature = Pass::CreateTownscaperRootSignature(m_device.Get());
+  m_townscaperPSO_Buildings =
+      Pass::CreateTownscaperPipelineState_Buildings(m_device.Get(), m_townscaperRootSignature.Get());
+  m_townscaperPSO_Generic =
+      Pass::CreateTownscaperPipelineState_Generic(m_device.Get(), m_townscaperRootSignature.Get());
 }
 
 void D3D12Renderer::InitializeFenceObjects() {
@@ -107,7 +113,7 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   if (scene.m_isTownscaper) {
     // TODO: do Townscaper-specific stuff.
     RunShadowPass(scene.m_shadowMapCamera, scene.m_object);
-    RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
+    Townscaper_RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
   } else {
     RunShadowPass(scene.m_shadowMapCamera, scene.m_object);
     RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
@@ -134,6 +140,95 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   m_cl->Close();
   ID3D12CommandList* cl[] = {m_cl.Get()};
   m_directCommandQueue->ExecuteCommandLists(1, cl);
+}
+
+void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
+                                            const OrthographicCamera& shadowMapCamera,
+                                            const Object& object) {
+  // Set the root signature (applicable for all shaders we'll be running here).
+  m_cl->SetGraphicsRootSignature(m_townscaperRootSignature.Get());
+
+  // Set up general necessary state.
+  unsigned int width = m_window.GetWidth();
+  unsigned int height = m_window.GetHeight();
+  CD3DX12_VIEWPORT clientAreaViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+  CD3DX12_RECT scissorRect(0, 0, width, height);
+  m_cl->RSSetViewports(1, &clientAreaViewport);
+  m_cl->RSSetScissorRects(1, &scissorRect);
+
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRTVDescriptorHandle();
+  D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthBuffer.GetDSVDescriptorHandle();
+  m_cl->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+  // Set up the constant buffer for the per-frame data.
+  ColorPass::PerFrameData perFrameData;
+  perFrameData.projectionViewTransform = camera.GenerateViewPerspectiveTransform4x4(m_window.GetAspectRatio());
+  perFrameData.shadowMapProjectionViewTransform = shadowMapCamera.GenerateViewPerspectiveTransform4x4();
+  perFrameData.lightDirection = shadowMapCamera.GetLightDirection();
+  D3D12_GPU_VIRTUAL_ADDRESS colorPassPerFrameConstantBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerFrameData), &perFrameData, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 0, colorPassPerFrameConstantBuffer);
+
+  // Set up the constant buffer for the per-object data.
+  // TODO: we only need 3x3 for the inverse transpose matrix; we should use XMStoreFloat3x3 instead.
+  DirectX::XMMATRIX modelTransform = object.GenerateModelTransform();
+  DirectX::XMMATRIX modelTransformModified = modelTransform;
+  modelTransformModified.r[3] = DirectX::XMVectorSet(0.f, 0.f, 0.f, 1.f);
+  DirectX::XMMATRIX modelTransformInverseTranspose =
+      DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, modelTransformModified));
+
+  ColorPass::PerObjectData perObjectData;
+  DirectX::XMStoreFloat4x4(&perObjectData.modelTransform, modelTransform);
+  DirectX::XMStoreFloat4x4(&perObjectData.modelTransformInverseTranspose, modelTransformInverseTranspose);
+  D3D12_GPU_VIRTUAL_ADDRESS colorPassPerObjectBuffer =
+      m_constantBufferAllocator.AllocateAndUpload(sizeof(ColorPass::PerObjectData), &perObjectData, m_nextFenceValue);
+  m_cl->SetGraphicsRootConstantBufferView(/*rootParameterIndex*/ 1, colorPassPerObjectBuffer);
+
+  float clearColor[4] = {0.1f, 0.2f, 0.3f, 1.0f};
+  m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+  m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
+  m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  m_cl->IASetVertexBuffers(0, 1, &object.model.m_vertexBufferView);
+  m_cl->IASetIndexBuffer(&object.model.m_indexBufferView);
+
+  CD3DX12_RESOURCE_BARRIER shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ);
+  m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
+
+  // Set the descriptor heap.
+  ID3D12DescriptorHeap* circularBufferSRVDescriptorHeap[] = {m_circularSRVDescriptorAllocator.GetDescriptorHeap()};
+  m_cl->SetDescriptorHeaps(1, circularBufferSRVDescriptorHeap);
+
+  DescriptorAllocation shadowMapSRVDescriptor =
+      m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+  m_device->CopyDescriptorsSimple(1, shadowMapSRVDescriptor.cpuStart, m_shadowMap.GetSRVDescriptorHandle(),
+                                  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  m_cl->SetGraphicsRootDescriptorTable(2, shadowMapSRVDescriptor.gpuStart);
+
+  assert(object.model.m_materials.size() == 1);
+  const Model::Material& townColors = object.model.m_materials[0];
+  DescriptorAllocation textureSRVDescriptor = m_circularSRVDescriptorAllocator.AllocateSingleDescriptor(m_nextFenceValue);
+  m_device->CopyDescriptorsSimple(1, textureSRVDescriptor.cpuStart, townColors.m_srvDescriptor.cpuStart,
+                                  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
+
+  for (size_t i = 0; i < object.model.m_meshParts.size(); ++i) {
+    const auto& meshPart = object.model.m_meshParts[i];
+    if (i == 0) {
+      m_cl->SetPipelineState(m_townscaperPSO_Buildings.Get());
+    } else {
+      m_cl->SetPipelineState(m_townscaperPSO_Generic.Get());
+    }
+
+    m_cl->DrawIndexedInstanced(meshPart.numIndices, /*instanceCount*/ 1, meshPart.indexStart, /*baseVertexLocation*/ 0,
+                               /*startInstanceLocation*/ 0);
+  }
+
+  shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+      m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+  m_cl->ResourceBarrier(1, &shadowMapResourceBarrier);
 }
 
 // Expects that the shadow map resource is in D3D12_RESOURCE_STATE_DEPTH_WRITE.
@@ -183,7 +278,6 @@ void D3D12Renderer::RunShadowPass(const OrthographicCamera& shadowMapCamera, con
 void D3D12Renderer::RunColorPass(const PinholeCamera& camera,
                                  const OrthographicCamera& shadowMapCamera,
                                  const Object& object) {
-  ID3D12Resource* backBuffer = m_window.GetCurrentBackBuffer();
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = m_renderTarget.GetRTVDescriptorHandle();
   D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = m_depthBuffer.GetDSVDescriptorHandle();
 

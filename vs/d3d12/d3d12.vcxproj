@@ -156,6 +156,7 @@ $(NinjaBuildCommand) $(NinjaTarget_d3d12_renderer)</NMakeReBuildCommandLine>
   <ItemGroup>
     <FxCompile Include="..\..\d3d12\shaders\ColorPassShaders.hlsl" />
     <FxCompile Include="..\..\d3d12\shaders\ShadowMapShaders.hlsl" />
+    <FxCompile Include="..\..\d3d12\shaders\Townscaper_Buildings.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

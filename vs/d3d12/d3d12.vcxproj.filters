@@ -143,5 +143,8 @@
     <FxCompile Include="..\..\d3d12\shaders\ShadowMapShaders.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\d3d12\shaders\Townscaper_Buildings.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
