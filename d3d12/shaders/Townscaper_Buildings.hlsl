@@ -44,17 +44,19 @@ float4 PSMain(PSInput input) : SV_TARGET{
   int2 textureXYWholePart = trunc(textureXY);
   float2 textureXYFracPart = frac(textureXY);
 
-  int2 TEMP_ActualTexXY = textureXYWholePart;
-  if (textureXYWholePart.x % 2 == 0 && textureXYFracPart.x >= 0.1) {
-    TEMP_ActualTexXY.x++;
+  int2 adjustedTexXY = textureXYWholePart;
+  bool isXOdd = (textureXYWholePart.x % 2 == 1);
+  bool isYEven = (textureXYWholePart.y % 2 == 0);
+  if (isXOdd && textureXYFracPart.x >= 0.1) {
+    adjustedTexXY.x++;
   }
 
-  if (textureXYWholePart.y % 2 == 0 && textureXYFracPart.y >= 0.1) {
-    TEMP_ActualTexXY.y++;
+  if (isYEven && textureXYFracPart.y >= 0.1) {
+    adjustedTexXY.y++;
   }
 
-  float2 TEMP_ActualTexUV = float2(TEMP_ActualTexXY.xy) / 512.f;
-  float4 texValue = objectTexture.Sample(texSampler, TEMP_ActualTexUV);
+  float2 adjustedUV = (float2(adjustedTexXY.xy) + float2(0.5f, 0.5f)) / 512.f;
+  float4 texValue = objectTexture.Sample(texSampler, adjustedUV);
 
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
 
