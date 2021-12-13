@@ -47,12 +47,20 @@ float4 PSMain(PSInput input) : SV_TARGET{
   int2 adjustedTexXY = textureXYWholePart;
   bool isXOdd = (textureXYWholePart.x % 2 == 1);
   bool isYEven = (textureXYWholePart.y % 2 == 0);
-  if (isXOdd && textureXYFracPart.x >= 0.1) {
-    adjustedTexXY.x++;
+  if (isXOdd) {
+    if (textureXYFracPart.x < 0.4) {
+      adjustedTexXY.x--;
+    } else if (textureXYFracPart.x > 0.6) {
+      adjustedTexXY.x++;
+    }
   }
 
-  if (isYEven && textureXYFracPart.y >= 0.1) {
-    adjustedTexXY.y++;
+  if (isYEven) {
+    if (textureXYFracPart.y < 0.4) {
+      adjustedTexXY.y--;
+    } else if (textureXYFracPart.y > 0.6) {
+      adjustedTexXY.y++;
+    }
   }
 
   float2 adjustedUV = (float2(adjustedTexXY.xy) + float2(0.5f, 0.5f)) / 512.f;
