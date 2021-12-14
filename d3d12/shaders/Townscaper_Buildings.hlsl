@@ -37,9 +37,9 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   return result;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET{
+float4 SampleTownscaperTexture(float2 uv) {
   float2 imageSize = float2(512.f, 512.f);
-  float2 textureXY = input.tex * imageSize;
+  float2 textureXY = uv * imageSize;
 
   int2 textureXYWholePart = trunc(textureXY);
   float2 textureXYFracPart = frac(textureXY);
@@ -64,12 +64,22 @@ float4 PSMain(PSInput input) : SV_TARGET{
   }
 
   float2 adjustedUV = (float2(adjustedTexXY.xy) + float2(0.5f, 0.5f)) / 512.f;
-  float4 texValue = objectTexture.Sample(texSampler, adjustedUV);
+  return objectTexture.Sample(texSampler, adjustedUV);
+}
+
+float4 PSMain(PSInput input) : SV_TARGET{
+  float2 dx = ddx(input.tex);
+  float2 dy = ddy(input.tex);
+
+  float4 texValue = SampleTownscaperTexture(input.tex);
+  texValue += SampleTownscaperTexture(input.tex + (dx / 2));
+  texValue += SampleTownscaperTexture(input.tex + (dy / 2));
+  texValue += SampleTownscaperTexture(input.tex + (dx / 2) + (dy / 2));
+  texValue /= 4;
 
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
 
-  float2 shadowMapTexCoord =
-      float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
+  float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
   float depthInShadowMap = input.shadowMapPos.z;
 
   // Visibility is a value between 0 & 1, where 0 is fully in shadow, and 1 is fully illuminated by the light.
