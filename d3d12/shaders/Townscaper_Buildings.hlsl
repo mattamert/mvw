@@ -37,7 +37,7 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   return result;
 }
 
-float4 SampleTownscaperTexture(float2 uv) {
+float4 SampleTownscaperBuildingTexture(float2 uv) {
   float2 imageSize = float2(512.f, 512.f);
   float2 textureXY = uv * imageSize;
 
@@ -71,10 +71,10 @@ float4 PSMain(PSInput input) : SV_TARGET{
   float2 dx = ddx(input.tex) / 4;
   float2 dy = ddy(input.tex) / 4;
 
-  float4 texValue = SampleTownscaperTexture(input.tex + dx + dy);
-  texValue += SampleTownscaperTexture(input.tex + dx - dy);
-  texValue += SampleTownscaperTexture(input.tex - dx + dy);
-  texValue += SampleTownscaperTexture(input.tex - dx - dy);
+  float4 texValue = SampleTownscaperBuildingTexture(input.tex + dx + dy);
+  texValue += SampleTownscaperBuildingTexture(input.tex + dx - dy);
+  texValue += SampleTownscaperBuildingTexture(input.tex - dx + dy);
+  texValue += SampleTownscaperBuildingTexture(input.tex - dx - dy);
   texValue /= 4;
 
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
