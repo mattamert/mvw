@@ -68,13 +68,13 @@ float4 SampleTownscaperTexture(float2 uv) {
 }
 
 float4 PSMain(PSInput input) : SV_TARGET{
-  float2 dx = ddx(input.tex);
-  float2 dy = ddy(input.tex);
+  float2 dx = ddx(input.tex) / 4;
+  float2 dy = ddy(input.tex) / 4;
 
-  float4 texValue = SampleTownscaperTexture(input.tex);
-  texValue += SampleTownscaperTexture(input.tex + (dx / 2));
-  texValue += SampleTownscaperTexture(input.tex + (dy / 2));
-  texValue += SampleTownscaperTexture(input.tex + (dx / 2) + (dy / 2));
+  float4 texValue = SampleTownscaperTexture(input.tex + dx + dy);
+  texValue += SampleTownscaperTexture(input.tex + dx - dy);
+  texValue += SampleTownscaperTexture(input.tex - dx + dy);
+  texValue += SampleTownscaperTexture(input.tex - dx - dy);
   texValue /= 4;
 
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
