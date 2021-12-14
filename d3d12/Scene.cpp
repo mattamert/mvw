@@ -23,7 +23,7 @@ void Scene::Initialize(const std::string& objFilename, bool isTownscaper, D3D12R
 
   m_objectRotationAnimation = Animation::CreateAnimation(10000, /*repeat*/ true);
 
-  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(-1, 1, 1, 1.f);
+  m_shadowMapCamera.position_ = DirectX::XMFLOAT4(1, 1, 0, 1.f);
   m_shadowMapCamera.look_at_ = DirectX::XMFLOAT4(0, 0, 0, 1);
   m_shadowMapCamera.widthInWorldCoordinates = 1.5;
   m_shadowMapCamera.heightInWorldCoordinates = 1.5;

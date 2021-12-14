@@ -75,10 +75,10 @@ float4 PSMain(PSInput input) : SV_TARGET{
   // Visibility is a value between 0 & 1, where 0 is fully in shadow, and 1 is fully illuminated by the light.
   float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
  
-  // Map it to 0.66 -> 1
-  visibility = (visibility + 2) / 3;
+  // Map it to 0.5 -> 1
+  visibility = (visibility + 1) / 2;
 
-  float shadowAmount = clamp(lambertFactor, 0.66, visibility);
+  float shadowAmount = clamp(lambertFactor, 0.5, visibility);
   texValue *= shadowAmount;
 
   return texValue;
