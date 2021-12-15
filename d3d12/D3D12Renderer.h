@@ -62,6 +62,17 @@ class D3D12Renderer {
   void InitializeFenceObjects();
   void InitializeShadowMapObjects();
 
+  enum TownscaperMeshID {
+    Buildings = 0,
+    Fencing = 1,
+    Props = 2,
+    Plants = 3,
+    Windows = 4,
+    Sand = 5,
+    Water = 6,
+    Birds = 7,
+  };
+
   void Townscaper_RunColorPass(const PinholeCamera& camera,
                                  const OrthographicCamera& shadowMapCamera,
                                  const Object& object);

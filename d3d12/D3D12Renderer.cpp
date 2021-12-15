@@ -148,6 +148,13 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   m_directCommandQueue->ExecuteCommandLists(1, cl);
 }
 
+namespace {
+void DrawMeshPart(ID3D12GraphicsCommandList* cl, const ObjFileData::MeshPart& meshPart) {
+  cl->DrawIndexedInstanced(meshPart.numIndices, /*instanceCount*/ 1, meshPart.indexStart, /*baseVertexLocation*/ 0,
+                           /*startInstanceLocation*/ 0);
+}
+}
+
 void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
                                             const OrthographicCamera& shadowMapCamera,
                                             const Object& object) {
@@ -192,7 +199,7 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
 
   float clearColor[4] = {0.1f, 0.2f, 0.3f, 1.0f};
   m_cl->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-  m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
+  m_cl->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.f, 0, 0, nullptr);
   m_cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   m_cl->IASetVertexBuffers(0, 1, &object.model.m_vertexBufferView);
@@ -220,17 +227,24 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
                                   D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
 
-  for (size_t i = 0; i < object.model.m_meshParts.size(); ++i) {
-    const auto& meshPart = object.model.m_meshParts[i];
-    if (i == 0) {
-      m_cl->SetPipelineState(m_townscaperPSO_Buildings.Get());
-    } else {
-      m_cl->SetPipelineState(m_townscaperPSO_Generic.Get());
-    }
+  
+  m_cl->SetPipelineState(m_townscaperPSO_Buildings.Get());
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Buildings]);
 
-    m_cl->DrawIndexedInstanced(meshPart.numIndices, /*instanceCount*/ 1, meshPart.indexStart, /*baseVertexLocation*/ 0,
-                               /*startInstanceLocation*/ 0);
-  }
+  m_cl->SetPipelineState(m_townscaperPSO_Windows_Stencil.Get());
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
+
+  m_cl->OMSetStencilRef(1);
+  m_cl->SetPipelineState(m_townscaperPSO_Windows_Color.Get());
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
+
+  m_cl->SetPipelineState(m_townscaperPSO_Generic.Get());
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Birds]);
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Fencing]);
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Plants]);
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Props]);
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Sand]);
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Water]);
 
   shadowMapResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
       m_shadowMap.GetResource(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE);
