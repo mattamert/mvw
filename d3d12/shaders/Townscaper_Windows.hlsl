@@ -37,24 +37,8 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   return result;
 }
 
-float4 PSMain_StencilPass(PSInput input) : SV_TARGET {
-  float4 texValue = objectTexture.Sample(aniSampler, input.tex);
-  if (texValue.w == 0.f) {
-    discard;
-  }
-
-  float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
-
-  float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
-  float depthInShadowMap = input.shadowMapPos.z;
-  float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
-
-  visibility = (visibility + 1) / 2;
-
-  float shadowAmount = clamp(lambertFactor, 0.5, visibility);
-  texValue *= shadowAmount;
-
-  return texValue;
+void PSMain_StencilPass(PSInput input) {
+  // Do nothing; we only need to update the stencil buffer data in this pass.
 }
 
 float4 PSMain_ColorPass(PSInput input) : SV_TARGET {
