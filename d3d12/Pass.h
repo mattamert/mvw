@@ -47,8 +47,12 @@ class ShadowMapPass : public GraphicsPass {
 
 namespace Pass {
 Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateTownscaperRootSignature(ID3D12Device* device);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPipelineState_Buildings(ID3D12Device* device,
-                                                                                    ID3D12RootSignature* rootSignature);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPipelineState_Generic(ID3D12Device* device,
-                                                                                  ID3D12RootSignature* rootSignature);
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Buildings(ID3D12Device* device,
+                                                                          ID3D12RootSignature* rootSignature);
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Stencil(ID3D12Device* device,
+                                                                                ID3D12RootSignature* rootSignature);
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Color(ID3D12Device* device,
+                                                                              ID3D12RootSignature* rootSignature);
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Generic(ID3D12Device* device,
+                                                                        ID3D12RootSignature* rootSignature);
 }  // namespace Pass

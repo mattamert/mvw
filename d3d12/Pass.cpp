@@ -223,8 +223,8 @@ ComPtr<ID3D12RootSignature> Pass::CreateTownscaperRootSignature(ID3D12Device* de
   return SerializeAndCreateRootSignature(device, &rootSignatureDesc);
 }
 
-ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPipelineState_Buildings(ID3D12Device* device,
-                                                                          ID3D12RootSignature* rootSignature) {
+ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Buildings(ID3D12Device* device,
+                                                                ID3D12RootSignature* rootSignature) {
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
   HR(CompileShader(L"Townscaper_Buildings.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
@@ -263,8 +263,88 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPipelineState_Buildings(ID3D12
   return pipelineState;
 }
 
-ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPipelineState_Generic(ID3D12Device* device,
-                                                                        ID3D12RootSignature* rootSignature) {
+ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Stencil(ID3D12Device* device,
+                                                                      ID3D12RootSignature* rootSignature) {
+  Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
+  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_StencilPass", "ps_5_0", /*out*/ pixelShader));
+
+  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
+      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"TEXCOORD", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"NORMAL", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+  };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = {inputElements, _countof(inputElements)};
+  psoDesc.pRootSignature = rootSignature;
+  psoDesc.VS = {vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()};
+  psoDesc.PS = {pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()};
+  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 1;
+  psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  psoDesc.SampleDesc.Count = 1;
+  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+
+  ComPtr<ID3D12PipelineState> pipelineState;
+  HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+  return pipelineState;
+}
+
+ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Color(ID3D12Device* device,
+                                                                    ID3D12RootSignature* rootSignature) {
+  Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
+  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_ColorPass", "ps_5_0", /*out*/ pixelShader));
+
+  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
+      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"TEXCOORD", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"NORMAL", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+  };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = {inputElements, _countof(inputElements)};
+  psoDesc.pRootSignature = rootSignature;
+  psoDesc.VS = {vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()};
+  psoDesc.PS = {pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()};
+  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 1;
+  psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  psoDesc.SampleDesc.Count = 1;
+  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+
+  ComPtr<ID3D12PipelineState> pipelineState;
+  HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+  return pipelineState;
+}
+
+ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Generic(ID3D12Device* device,
+                                                              ID3D12RootSignature* rootSignature) {
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
   HR(CompileShader(L"ColorPassShaders.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
