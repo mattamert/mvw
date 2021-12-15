@@ -13,13 +13,12 @@ class D3D12Renderer;
 class Scene {
 public:
   std::string m_objFilename;
-  bool m_isTownscaper;
   Object m_object;
   Animation m_objectRotationAnimation;
 
   OrthographicCamera m_shadowMapCamera;
   ArcballCameraController m_camera;
 
-  void Initialize(const std::string& objFilename, bool isTownscaper, D3D12Renderer* renderer);
+  void Initialize(const std::string& objFilename, D3D12Renderer* renderer);
   void TickAnimations();
 };

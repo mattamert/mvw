@@ -30,7 +30,8 @@ ComPtr<IDXGIAdapter> FindAdapter(IDXGIFactory4* factory) {
 
 }  // namespace
 
-void D3D12Renderer::Initialize(HWND hwnd) {
+void D3D12Renderer::Initialize(HWND hwnd, bool isTownscaper) {
+  m_isTownscaper = isTownscaper;
   EnableDebugLayer();
 
   InitializePerDeviceObjects();
@@ -70,8 +71,10 @@ void D3D12Renderer::InitializePerWindowObjects(HWND hwnd) {
   m_window.Initialize(m_factory.Get(), m_device.Get(), m_directCommandQueue.Get(), hwnd);
   m_renderTarget.Initialize(m_device.Get(), m_linearRTVDescriptorAllocator.AllocateSingleDescriptor().cpuStart,
                             m_window.GetWidth(), m_window.GetHeight());
+
+  DXGI_FORMAT depthStencilFormat = (m_isTownscaper) ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_D32_FLOAT;
   m_depthBuffer.Initialize(m_device.Get(), m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
-                           m_window.GetWidth(), m_window.GetHeight());
+                           depthStencilFormat, m_window.GetWidth(), m_window.GetHeight());
 }
 
 void D3D12Renderer::InitializePerPassObjects() {
@@ -94,7 +97,9 @@ void D3D12Renderer::InitializeFenceObjects() {
 
 void D3D12Renderer::InitializeShadowMapObjects() {
   m_shadowMap.InitializeWithSRV(m_device.Get(), m_linearDSVDescriptorAllocator.AllocateSingleDescriptor(),
-                                m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(), 2000, 2000);
+                                m_linearSRVDescriptorAllocator.AllocateSingleDescriptor(), DXGI_FORMAT_D32_FLOAT,
+                                /*width*/ 2000,
+                                /*height*/ 2000);
 }
 
 void D3D12Renderer::HandleResize(unsigned int width, unsigned int height) {
@@ -110,8 +115,7 @@ void D3D12Renderer::DrawScene(Scene& scene) {
   HR(m_directCommandAllocator->Reset());
   HR(m_cl->Reset(m_directCommandAllocator.Get(), nullptr));
 
-  if (scene.m_isTownscaper) {
-    // TODO: do Townscaper-specific stuff.
+  if (m_isTownscaper) {
     RunShadowPass(scene.m_shadowMapCamera, scene.m_object);
     Townscaper_RunColorPass(scene.m_camera.GetPinholeCamera(), scene.m_shadowMapCamera, scene.m_object);
   } else {

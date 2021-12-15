@@ -30,18 +30,21 @@ class RenderTargetTexture : public TextureResource {
   D3D12_CPU_DESCRIPTOR_HANDLE GetRTVDescriptorHandle() const;
 };
 
-class DepthBufferTexture : public TextureResource {
+class DepthStencilTexture : public TextureResource {
   DescriptorAllocation m_dsvDescriptor;
   DescriptorAllocation m_srvDescriptor;
+  DXGI_FORMAT m_format;
 
  public:
   void Initialize(ID3D12Device* device,
                   const DescriptorAllocation& dsvDescriptorDestination,
+                  DXGI_FORMAT format,
                   unsigned int width,
                   unsigned int height);
   void InitializeWithSRV(ID3D12Device* device,
                          const DescriptorAllocation& dsvDescriptorDestination,
                          const DescriptorAllocation& srvDescriptorDestination,
+                         DXGI_FORMAT format,
                          unsigned int width,
                          unsigned int height);
 

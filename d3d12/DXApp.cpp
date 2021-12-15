@@ -15,8 +15,8 @@
 
 void DXApp::Initialize(std::shared_ptr<MessageQueue> messageQueue, HWND hwnd, std::string filename, bool isTownscaper) {
   m_messageQueue = std::move(messageQueue);
-  m_renderer.Initialize(hwnd);
-  m_scene.Initialize(filename, isTownscaper, &m_renderer);
+  m_renderer.Initialize(hwnd, isTownscaper);
+  m_scene.Initialize(filename, &m_renderer);
   m_isInitialized = true;
 }
 

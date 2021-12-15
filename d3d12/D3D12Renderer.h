@@ -32,10 +32,10 @@ class D3D12Renderer {
   // Window-size dependent resources.
   WindowSwapChain m_window;
   RenderTargetTexture m_renderTarget;
-  DepthBufferTexture m_depthBuffer;
+  DepthStencilTexture m_depthBuffer;
   
   // Shadow Maps.
-  DepthBufferTexture m_shadowMap;
+  DepthStencilTexture m_shadowMap;
 
   // Pass data.
   ColorPass m_colorPass;
@@ -49,6 +49,9 @@ class D3D12Renderer {
   HANDLE m_fenceEvent = NULL;
   uint64_t m_nextFenceValue = 1;  // This must be initialized to 1, since fences start out at 0.
   ResourceGarbageCollector m_garbageCollector;
+
+  // Rendering controls.
+  bool m_isTownscaper;
 
   // Note: InitializePerDeviceObjects must be called before the others.
   void InitializePerDeviceObjects();
@@ -65,7 +68,7 @@ class D3D12Renderer {
   void RunColorPass(const PinholeCamera& camera, const OrthographicCamera& shadowCamera, const Object& object);
 
 public:
-  void Initialize(HWND hwnd);
+  void Initialize(HWND hwnd, bool isTownscaper);
   void HandleResize(unsigned int width, unsigned int height);
 
   void DrawScene(Scene& scene);
