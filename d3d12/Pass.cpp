@@ -256,7 +256,7 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Buildings(ID3D12Device* de
   psoDesc.NumRenderTargets = 1;
   psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   psoDesc.SampleDesc.Count = 1;
-  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+  psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
   ComPtr<ID3D12PipelineState> pipelineState;
   HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
@@ -296,7 +296,7 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Stencil(ID3D12Devi
   psoDesc.NumRenderTargets = 1;
   psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   psoDesc.SampleDesc.Count = 1;
-  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+  psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
   ComPtr<ID3D12PipelineState> pipelineState;
   HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
@@ -336,7 +336,7 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Color(ID3D12Device
   psoDesc.NumRenderTargets = 1;
   psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   psoDesc.SampleDesc.Count = 1;
-  psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+  psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
   ComPtr<ID3D12PipelineState> pipelineState;
   HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
