@@ -268,7 +268,7 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Stencil(ID3D12Devi
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
   Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
   HR(CompileShader(L"Townscaper_Windows.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
-  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_StencilPass", "ps_5_0", /*out*/ pixelShader));
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ pixelShader));
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -313,6 +313,61 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Stencil(ID3D12Devi
   return pipelineState;
 }
 
+ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Depth(ID3D12Device* device,
+  ID3D12RootSignature* rootSignature) {
+  Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
+  Microsoft::WRL::ComPtr<ID3DBlob> pixelShader;
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "VSMain", "vs_5_0", /*out*/ vertexShader));
+  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ pixelShader));
+
+  D3D12_INPUT_ELEMENT_DESC inputElements[] = {
+      {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"TEXCOORD", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+      {"NORMAL", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
+       /*AlignedByteOffset*/ 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+       /*InstanceDataStepRate*/ 0},
+  };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout = { inputElements, _countof(inputElements) };
+  psoDesc.pRootSignature = rootSignature;
+  psoDesc.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
+  psoDesc.PS = { pixelShader->GetBufferPointer(), pixelShader->GetBufferSize() };
+  psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
+  psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  //psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  psoDesc.DepthStencilState.DepthEnable = TRUE;
+  psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+  psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+  psoDesc.DepthStencilState.StencilEnable = TRUE;
+  psoDesc.DepthStencilState.StencilReadMask = 0x1;
+  psoDesc.DepthStencilState.StencilWriteMask = 0x1;
+  psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+  psoDesc.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+  psoDesc.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+  psoDesc.SampleMask = UINT_MAX;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  psoDesc.NumRenderTargets = 0;
+  //psoDesc.NumRenderTargets = 1;
+  //psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  psoDesc.SampleDesc.Count = 1;
+  psoDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+  ComPtr<ID3D12PipelineState> pipelineState;
+  HR(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+  return pipelineState;
+}
+
 ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Color(ID3D12Device* device,
                                                                     ID3D12RootSignature* rootSignature) {
   Microsoft::WRL::ComPtr<ID3DBlob> vertexShader;
@@ -342,14 +397,14 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Windows_Color(ID3D12Device
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   //psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
   psoDesc.DepthStencilState.DepthEnable = TRUE;
-  psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+  psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
   psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
   psoDesc.DepthStencilState.StencilEnable = TRUE;
   psoDesc.DepthStencilState.StencilReadMask = 0x1;
   psoDesc.DepthStencilState.StencilWriteMask = 0x1;
   psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
   psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-  psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_ZERO;
+  psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
   psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
   psoDesc.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
   psoDesc.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
@@ -392,7 +447,8 @@ ComPtr<ID3D12PipelineState> Pass::CreateTownscaperPSO_Generic(ID3D12Device* devi
   psoDesc.VS = {vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()};
   psoDesc.PS = {pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()};
   psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+  psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
+  //psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
   psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
   psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
   psoDesc.SampleMask = UINT_MAX;

@@ -85,6 +85,8 @@ void D3D12Renderer::InitializePerPassObjects() {
   m_townscaperPSO_Buildings = Pass::CreateTownscaperPSO_Buildings(m_device.Get(), m_townscaperRootSignature.Get());
   m_townscaperPSO_Windows_Stencil =
       Pass::CreateTownscaperPSO_Windows_Stencil(m_device.Get(), m_townscaperRootSignature.Get());
+  m_townscaperPSO_Windows_Depth =
+      Pass::CreateTownscaperPSO_Windows_Depth(m_device.Get(), m_townscaperRootSignature.Get());
   m_townscaperPSO_Windows_Color =
       Pass::CreateTownscaperPSO_Windows_Color(m_device.Get(), m_townscaperRootSignature.Get());
   m_townscaperPSO_Generic = Pass::CreateTownscaperPSO_Generic(m_device.Get(), m_townscaperRootSignature.Get());
@@ -235,6 +237,8 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 
   m_cl->OMSetStencilRef(1);
+  m_cl->SetPipelineState(m_townscaperPSO_Windows_Depth.Get());
+  DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
   m_cl->SetPipelineState(m_townscaperPSO_Windows_Color.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 

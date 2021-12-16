@@ -37,8 +37,8 @@ PSInput VSMain(float3 pos : POSITION, float2 tex : TEXCOORD, float3 normal : NOR
   return result;
 }
 
-void PSMain_StencilPass(PSInput input) {
-  // Do nothing; we only need to update the stencil buffer data in this pass.
+void PSMain_Empty(PSInput input) {
+  // Do nothing; we only need to either update the stencil buffer or the depth buffer in this pass.
 }
 
 float4 PSMain_ColorPass(PSInput input) : SV_TARGET {

@@ -51,6 +51,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Buildings(ID3D12
                                                                           ID3D12RootSignature* rootSignature);
 Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Stencil(ID3D12Device* device,
                                                                                 ID3D12RootSignature* rootSignature);
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Depth(ID3D12Device* device,
+                                                                              ID3D12RootSignature* rootSignature);
 Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Color(ID3D12Device* device,
                                                                               ID3D12RootSignature* rootSignature);
 Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Generic(ID3D12Device* device,
