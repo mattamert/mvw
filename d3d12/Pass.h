@@ -45,16 +45,13 @@ class ShadowMapPass : public GraphicsPass {
   void Initialize(ID3D12Device* device) override;
 };
 
-namespace Pass {
-Microsoft::WRL::ComPtr<ID3D12RootSignature> CreateTownscaperRootSignature(ID3D12Device* device);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Buildings(ID3D12Device* device,
-                                                                          ID3D12RootSignature* rootSignature);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Stencil(ID3D12Device* device,
-                                                                                ID3D12RootSignature* rootSignature);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Depth(ID3D12Device* device,
-                                                                              ID3D12RootSignature* rootSignature);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Windows_Color(ID3D12Device* device,
-                                                                              ID3D12RootSignature* rootSignature);
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateTownscaperPSO_Generic(ID3D12Device* device,
-                                                                        ID3D12RootSignature* rootSignature);
-}  // namespace Pass
+struct TownscaperPSOs {
+  Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoBuildings;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Stencil;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Depth;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Color;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoGenericColor;
+
+  void Initialize(ID3D12Device* device);
+};

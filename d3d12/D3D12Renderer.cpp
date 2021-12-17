@@ -80,16 +80,7 @@ void D3D12Renderer::InitializePerWindowObjects(HWND hwnd) {
 void D3D12Renderer::InitializePerPassObjects() {
   m_colorPass.Initialize(m_device.Get());
   m_shadowMapPass.Initialize(m_device.Get());
-
-  m_townscaperRootSignature = Pass::CreateTownscaperRootSignature(m_device.Get());
-  m_townscaperPSO_Buildings = Pass::CreateTownscaperPSO_Buildings(m_device.Get(), m_townscaperRootSignature.Get());
-  m_townscaperPSO_Windows_Stencil =
-      Pass::CreateTownscaperPSO_Windows_Stencil(m_device.Get(), m_townscaperRootSignature.Get());
-  m_townscaperPSO_Windows_Depth =
-      Pass::CreateTownscaperPSO_Windows_Depth(m_device.Get(), m_townscaperRootSignature.Get());
-  m_townscaperPSO_Windows_Color =
-      Pass::CreateTownscaperPSO_Windows_Color(m_device.Get(), m_townscaperRootSignature.Get());
-  m_townscaperPSO_Generic = Pass::CreateTownscaperPSO_Generic(m_device.Get(), m_townscaperRootSignature.Get());
+  m_townscaperPSOs.Initialize(m_device.Get());
 }
 
 void D3D12Renderer::InitializeFenceObjects() {
@@ -161,7 +152,7 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
                                             const OrthographicCamera& shadowMapCamera,
                                             const Object& object) {
   // Set the root signature (applicable for all shaders we'll be running here).
-  m_cl->SetGraphicsRootSignature(m_townscaperRootSignature.Get());
+  m_cl->SetGraphicsRootSignature(m_townscaperPSOs.m_rootSignature.Get());
 
   // Set up general necessary state.
   unsigned int width = m_window.GetWidth();
@@ -230,19 +221,20 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
   m_cl->SetGraphicsRootDescriptorTable(3, textureSRVDescriptor.gpuStart);
 
   
-  m_cl->SetPipelineState(m_townscaperPSO_Buildings.Get());
+  //m_cl->SetPipelineState(m_townscaperPSO_Buildings.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoBuildings.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Buildings]);
 
-  m_cl->SetPipelineState(m_townscaperPSO_Windows_Stencil.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_Stencil.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 
   m_cl->OMSetStencilRef(1);
-  m_cl->SetPipelineState(m_townscaperPSO_Windows_Depth.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_Depth.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
-  m_cl->SetPipelineState(m_townscaperPSO_Windows_Color.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_Color.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 
-  m_cl->SetPipelineState(m_townscaperPSO_Generic.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoGenericColor.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Birds]);
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Fencing]);
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Plants]);

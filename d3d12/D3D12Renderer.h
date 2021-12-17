@@ -40,12 +40,7 @@ class D3D12Renderer {
   // Pass data.
   ColorPass m_colorPass;
   ShadowMapPass m_shadowMapPass;
-  Microsoft::WRL::ComPtr<ID3D12RootSignature> m_townscaperRootSignature;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Buildings;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Windows_Stencil;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Windows_Depth;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Windows_Color;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_townscaperPSO_Generic;
+  TownscaperPSOs m_townscaperPSOs;
 
   // Fence stuff.
   Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
