@@ -67,6 +67,38 @@ float4 SampleTownscaperBuildingTexture(float2 uv) {
   return objectTexture.Sample(texSampler, adjustedUV);
 }
 
+float4 CalculateLighting(float4 texColor, float visibility) {
+  float4 darkColor = float4(0.49281, 0.58611, 0.68667, 1.00); // (light-blue-ish)
+  float4 darkFactor = float4(1.8000, 1.8000, 1.8000, 0.0000);
+
+  float4 lightColor = float4(0.70804, 0.61751, 0.54934, 1.00); // (Warm orange/yellow)
+  float4 lightFactor = float4(1.4000, 1.4000, 1.4000, 0.0000);
+
+  float4 darkColor_weighted = darkColor * darkFactor;
+  float4 lightColor_weighted = lightColor * lightFactor;
+
+  float4 color = (1 - visibility) * darkColor_weighted + lightColor_weighted * visibility;
+
+  float4 minimumLightness = lightColor* visibility * float4(0.4, 0.4, 0.4, 0.f);
+
+  // Not 100% sure what the color filter is for, or how to use it correctly here? It's a vertex attribute, and I don't
+  // know what generates it.
+  //float4 colorFilter = float4(0.91955, 0.77043, 0.77043, 0.84455);
+  float4 colorFilter = float4(1.f, 1.f, 1.f, 0.f);
+  float4 filteredColor = colorFilter * color + minimumLightness;
+  filteredColor += float4(0.1, 0.1, 0.1, 0.f);
+
+  float4 total_color = texColor * filteredColor;
+
+  // Not really sure what this represents.
+  float foo = total_color.r * 0.2 + total_color.g * 0.7 + total_color.b * 0.1;
+  foo = foo * 2 - 0.6f;
+
+  total_color += (foo * 0.1f);
+  total_color = ((0.6f - total_color) * float4(-0.2f, -0.05f, 0.2f, 0.f)) + total_color;
+  return total_color;
+}
+
 float4 PSMain(PSInput input) : SV_TARGET{
   float2 dx = ddx(input.tex) / 4;
   float2 dy = ddy(input.tex) / 4;
@@ -77,19 +109,12 @@ float4 PSMain(PSInput input) : SV_TARGET{
   texValue += SampleTownscaperBuildingTexture(input.tex - dx - dy);
   texValue /= 4;
 
-  float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
-
   float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
   float depthInShadowMap = input.shadowMapPos.z;
 
   // Visibility is a value between 0 & 1, where 0 is fully in shadow, and 1 is fully illuminated by the light.
   float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
- 
-  // Map it to 0.5 -> 1
-  visibility = (visibility + 1) / 2;
-
-  float shadowAmount = clamp(lambertFactor, 0.5, visibility);
-  texValue *= shadowAmount;
-
-  return texValue;
+  visibility *= 0.7;
+  float4 lightedValue = CalculateLighting(texValue, visibility);
+  return lightedValue;
 }
