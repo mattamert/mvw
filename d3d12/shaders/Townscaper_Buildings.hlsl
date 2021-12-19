@@ -84,7 +84,10 @@ float4 CalculateLighting(float4 texColor, float visibility) {
   // Not 100% sure what the color filter is for, or how to use it correctly here? It's a vertex attribute, and I don't
   // know what generates it.
   //float4 colorFilter = float4(0.91955, 0.77043, 0.77043, 0.84455);
-  float4 colorFilter = float4(1.f, 1.f, 1.f, 0.f);
+  //float4 colorFilter = float4 (0.64457, 0.66735, 0.67096, 0.62294);
+  float4 colorFilter = float4 (0.6f, 0.6f, 0.6f, 0.f);
+
+  //float4 colorFilter = float4(1.f, 1.f, 1.f, 0.f);
   float4 filteredColor = colorFilter * color + minimumLightness;
   filteredColor += float4(0.1, 0.1, 0.1, 0.f);
 
@@ -109,12 +112,16 @@ float4 PSMain(PSInput input) : SV_TARGET{
   texValue += SampleTownscaperBuildingTexture(input.tex - dx - dy);
   texValue /= 4;
 
+  float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
+  lambertFactor = (lambertFactor + 1) / 2;
+
   float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
   float depthInShadowMap = input.shadowMapPos.z;
 
   // Visibility is a value between 0 & 1, where 0 is fully in shadow, and 1 is fully illuminated by the light.
   float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
-  visibility *= 0.7;
+  visibility *= lambertFactor;
+ 
   float4 lightedValue = CalculateLighting(texValue, visibility);
   return lightedValue;
 }
