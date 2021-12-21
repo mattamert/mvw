@@ -257,10 +257,10 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
   Microsoft::WRL::ComPtr<ID3DBlob> buildingsPS;
   Microsoft::WRL::ComPtr<ID3DBlob> emptyPS;
   Microsoft::WRL::ComPtr<ID3DBlob> genericColorPS;
-  HR(CompileShader(L"Townscaper_Buildings.hlsl", "VSMain", "vs_5_0", /*out*/ genericVS));
-  HR(CompileShader(L"Townscaper_Buildings.hlsl", "PSMain", "ps_5_0", /*out*/ buildingsPS));
-  HR(CompileShader(L"Townscaper_Windows.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ emptyPS));
-  HR(CompileShader(L"ColorPassShaders.hlsl", "PSMain", "ps_5_0", /*out*/ genericColorPS));
+  HR(CompileShader(L"Townscaper.hlsl", "VSMain", "vs_5_0", /*out*/ genericVS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ emptyPS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Buildings", "ps_5_0", /*out*/ buildingsPS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_NonBuildings", "ps_5_0", /*out*/ genericColorPS));
 
   {
     D3D12_GRAPHICS_PIPELINE_STATE_DESC buildingsPSO = basePSO;

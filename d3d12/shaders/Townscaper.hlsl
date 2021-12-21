@@ -67,6 +67,10 @@ float4 SampleTownscaperBuildingTexture(float2 uv) {
   return objectTexture.Sample(texSampler, adjustedUV);
 }
 
+void PSMain_Empty(PSInput input) {
+  // Do nothing; we only need to either update the stencil buffer or the depth buffer in this pass.
+}
+
 float4 CalculateLighting(float4 texColor, float visibility) {
   float4 darkColor = float4(0.49281, 0.58611, 0.68667, 1.00); // (light-blue-ish)
   float4 darkFactor = float4(1.8000, 1.8000, 1.8000, 0.0000);
@@ -102,7 +106,7 @@ float4 CalculateLighting(float4 texColor, float visibility) {
   return total_color;
 }
 
-float4 PSMain(PSInput input) : SV_TARGET{
+float4 PSMain_Buildings(PSInput input) : SV_TARGET{
   float2 dx = ddx(input.tex) / 4;
   float2 dy = ddy(input.tex) / 4;
 
@@ -111,6 +115,26 @@ float4 PSMain(PSInput input) : SV_TARGET{
   texValue += SampleTownscaperBuildingTexture(input.tex - dx + dy);
   texValue += SampleTownscaperBuildingTexture(input.tex - dx - dy);
   texValue /= 4;
+
+  float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
+  lambertFactor = (lambertFactor + 1) / 2;
+
+  float2 shadowMapTexCoord = float2((input.shadowMapPos.x + 1) / 2, 1 - ((input.shadowMapPos.y + 1) / 2));
+  float depthInShadowMap = input.shadowMapPos.z;
+
+  // Visibility is a value between 0 & 1, where 0 is fully in shadow, and 1 is fully illuminated by the light.
+  float visibility = shadowMap.SampleCmpLevelZero(pointClampComp, shadowMapTexCoord, depthInShadowMap);
+  visibility = min(visibility, lambertFactor);
+ 
+  float4 lightedValue = CalculateLighting(texValue, visibility);
+  return lightedValue;
+}
+
+float4 PSMain_NonBuildings(PSInput input) : SV_TARGET {
+  float4 texValue = objectTexture.Sample(texSampler, input.tex);
+  if (texValue.w == 0.f) {
+    discard;
+  }
 
   float lambertFactor = dot(normalize(input.normal.xyz), normalize(lightDirection.xyz));
   lambertFactor = (lambertFactor + 1) / 2;
