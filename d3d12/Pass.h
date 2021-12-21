@@ -49,8 +49,9 @@ struct TownscaperPSOs {
   Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
   Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoBuildings;
   Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Stencil;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Depth;
-  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_Color;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_MaxDepth;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_MinDepth;
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoWindows_MinDepth_Color;
   Microsoft::WRL::ComPtr<ID3D12PipelineState> m_psoGenericColor;
 
   void Initialize(ID3D12Device* device);

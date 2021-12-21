@@ -229,9 +229,9 @@ void D3D12Renderer::Townscaper_RunColorPass(const PinholeCamera& camera,
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 
   m_cl->OMSetStencilRef(1);
-  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_Depth.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_MaxDepth.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
-  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_Color.Get());
+  m_cl->SetPipelineState(m_townscaperPSOs.m_psoWindows_MinDepth_Color.Get());
   DrawMeshPart(m_cl.Get(), object.model.m_meshParts[TownscaperMeshID::Windows]);
 
   m_cl->SetPipelineState(m_townscaperPSOs.m_psoGenericColor.Get());

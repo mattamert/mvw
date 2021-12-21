@@ -310,7 +310,7 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
     windowsDepthPSO.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
     windowsDepthPSO.NumRenderTargets = 0;
     windowsDepthPSO.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
-    HR(device->CreateGraphicsPipelineState(&windowsDepthPSO, IID_PPV_ARGS(&m_psoWindows_Depth)));
+    HR(device->CreateGraphicsPipelineState(&windowsDepthPSO, IID_PPV_ARGS(&m_psoWindows_MaxDepth)));
   }
 
   {
@@ -331,7 +331,13 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
     windowsColorPSO.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
     windowsColorPSO.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
     windowsColorPSO.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    HR(device->CreateGraphicsPipelineState(&windowsColorPSO, IID_PPV_ARGS(&m_psoWindows_Color)));
+    HR(device->CreateGraphicsPipelineState(&windowsColorPSO, IID_PPV_ARGS(&m_psoWindows_MinDepth_Color)));
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsMinDepth = windowsColorPSO;
+    windowsColorPSO.PS = {emptyPS->GetBufferPointer(), emptyPS->GetBufferSize()};
+    windowsMinDepth.NumRenderTargets = 0;
+    windowsMinDepth.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+    HR(device->CreateGraphicsPipelineState(&windowsColorPSO, IID_PPV_ARGS(&m_psoWindows_MinDepth)));
   }
 
   {
