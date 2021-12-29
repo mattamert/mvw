@@ -33,6 +33,10 @@ void EmitUsageMessage() {
 int main(int argc, char** argv) {
   HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
+  // Technically calling this API is discouraged, and it's prefered to specify this in the Application manifest.
+  // See: https://docs.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process
+  SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
   if (!IsMouseInPointerEnabled()) {
     (void)EnableMouseInPointer(TRUE);
   }
