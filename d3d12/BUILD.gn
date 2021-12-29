@@ -53,6 +53,7 @@ copy("d3d12_renderer_shaders") {
     "shaders/ColorPassShaders.hlsl",
     "shaders/ShadowMapShaders.hlsl",
     "shaders/Townscaper.hlsl",
+    "shaders/Townscaper_ShadowMap.hlsl",
   ]
 
   outputs = [ "$root_out_dir/{{source_file_part}}" ]

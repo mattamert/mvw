@@ -69,9 +69,10 @@ class D3D12Renderer {
     Birds = 7,
   };
 
+  void Townscaper_RunShadowPass(const OrthographicCamera& shadowMapCamera, const Object& object);
   void Townscaper_RunColorPass(const PinholeCamera& camera,
-                                 const OrthographicCamera& shadowMapCamera,
-                                 const Object& object);
+                               const OrthographicCamera& shadowMapCamera,
+                               const Object& object);
 
   void RunShadowPass(const OrthographicCamera& shadowCamera, const Object& object);
   void RunColorPass(const PinholeCamera& camera, const OrthographicCamera& shadowCamera, const Object& object);

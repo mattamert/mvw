@@ -223,10 +223,36 @@ ComPtr<ID3D12RootSignature> CreateTownscaperRootSignature(ID3D12Device* device) 
   rootSignatureDesc.pStaticSamplers = staticSamplers;
   return SerializeAndCreateRootSignature(device, &rootSignatureDesc);
 }
+
+ComPtr<ID3D12RootSignature> CreateTownscaperShadowMapRootSignature(ID3D12Device* device) {
+  const CD3DX12_STATIC_SAMPLER_DESC staticSamplers[] = {CD3DX12_STATIC_SAMPLER_DESC(
+      /*shaderRegister*/ 0, /*D3D12_FILTER*/ D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+      D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP)};
+
+  CD3DX12_DESCRIPTOR_RANGE texTable;
+  texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+  // CBV 0 is the per-frame data.
+  // CBV 1 is the per-object data.
+  CD3DX12_ROOT_PARAMETER parameters[3] = {};
+  parameters[0].InitAsConstantBufferView(/*shaderRegister*/ 0, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_ALL);
+  parameters[1].InitAsConstantBufferView(/*shaderRegister*/ 1, /*registerSpace*/ 0, D3D12_SHADER_VISIBILITY_VERTEX);
+  parameters[2].InitAsDescriptorTable(/*numDescriptorRanges*/ 1, /*pDescriptorRanges*/ &texTable,
+                                      D3D12_SHADER_VISIBILITY_PIXEL);
+
+  D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+  rootSignatureDesc.NumParameters = 3;
+  rootSignatureDesc.pParameters = parameters;
+  rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+  rootSignatureDesc.NumStaticSamplers = 1;
+  rootSignatureDesc.pStaticSamplers = staticSamplers;
+  return SerializeAndCreateRootSignature(device, &rootSignatureDesc);
+}
 }  // namespace
 
 void TownscaperPSOs::Initialize(ID3D12Device* device) {
   m_rootSignature = CreateTownscaperRootSignature(device);
+  m_shadowMapPassRootSignature = CreateTownscaperShadowMapRootSignature(device);
 
   D3D12_INPUT_ELEMENT_DESC inputElements[] = {
       {"POSITION", /*SemanticIndex*/ 0, DXGI_FORMAT_R32G32B32_FLOAT, /*InputSlot*/ 0,
@@ -240,6 +266,20 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
        /*InstanceDataStepRate*/ 0},
   };
 
+
+  Microsoft::WRL::ComPtr<ID3DBlob> genericVS;
+  Microsoft::WRL::ComPtr<ID3DBlob> buildingsPS;
+  Microsoft::WRL::ComPtr<ID3DBlob> emptyPS;
+  Microsoft::WRL::ComPtr<ID3DBlob> genericColorPS;
+  Microsoft::WRL::ComPtr<ID3DBlob> shadowMapVS;
+  Microsoft::WRL::ComPtr<ID3DBlob> shadowMapPS;
+  HR(CompileShader(L"Townscaper.hlsl", "VSMain", "vs_5_0", /*out*/ genericVS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ emptyPS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Buildings", "ps_5_0", /*out*/ buildingsPS));
+  HR(CompileShader(L"Townscaper.hlsl", "PSMain_NonBuildings", "ps_5_0", /*out*/ genericColorPS));
+  HR(CompileShader(L"Townscaper_ShadowMap.hlsl", "VSMain", "vs_5_0", /*out*/ shadowMapVS));
+  HR(CompileShader(L"Townscaper_ShadowMap.hlsl", "PSMain", "ps_5_0", /*out*/ shadowMapPS));
+
   D3D12_GRAPHICS_PIPELINE_STATE_DESC basePSO = {};
   basePSO.InputLayout = {inputElements, _countof(inputElements)};
   basePSO.pRootSignature = m_rootSignature.Get();
@@ -251,16 +291,29 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
   basePSO.NumRenderTargets = 1;
   basePSO.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   basePSO.SampleDesc.Count = 1;
-  basePSO.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+  basePSO.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
-  Microsoft::WRL::ComPtr<ID3DBlob> genericVS;
-  Microsoft::WRL::ComPtr<ID3DBlob> buildingsPS;
-  Microsoft::WRL::ComPtr<ID3DBlob> emptyPS;
-  Microsoft::WRL::ComPtr<ID3DBlob> genericColorPS;
-  HR(CompileShader(L"Townscaper.hlsl", "VSMain", "vs_5_0", /*out*/ genericVS));
-  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Empty", "ps_5_0", /*out*/ emptyPS));
-  HR(CompileShader(L"Townscaper.hlsl", "PSMain_Buildings", "ps_5_0", /*out*/ buildingsPS));
-  HR(CompileShader(L"Townscaper.hlsl", "PSMain_NonBuildings", "ps_5_0", /*out*/ genericColorPS));
+  const int shadowMapDepthBias = 50000;
+  const float shadowMapDepthBiasClamp = 0.f;
+  const float shadowMapSlopeScaledDepthBias = 1.f;
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC baseShadowMapPSO = {};
+  baseShadowMapPSO.InputLayout = {inputElements, 2};  // Purposefully ignore the normal - shadow maps don't need it.
+  baseShadowMapPSO.pRootSignature = m_shadowMapPassRootSignature.Get();
+  baseShadowMapPSO.VS = { shadowMapVS->GetBufferPointer(), shadowMapVS->GetBufferSize() };
+  baseShadowMapPSO.PS = { shadowMapPS->GetBufferPointer(), shadowMapPS->GetBufferSize() };
+  baseShadowMapPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+  baseShadowMapPSO.RasterizerState.DepthBias = shadowMapDepthBias;
+  baseShadowMapPSO.RasterizerState.DepthBiasClamp = shadowMapDepthBiasClamp;
+  baseShadowMapPSO.RasterizerState.SlopeScaledDepthBias = shadowMapSlopeScaledDepthBias;
+  baseShadowMapPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+  baseShadowMapPSO.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  baseShadowMapPSO.SampleMask = UINT_MAX;
+  baseShadowMapPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  baseShadowMapPSO.NumRenderTargets = 0;  // Only render depths for the shadow map.
+  baseShadowMapPSO.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+  baseShadowMapPSO.SampleDesc.Count = 1;
+  baseShadowMapPSO.DSVFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
   {
     D3D12_GRAPHICS_PIPELINE_STATE_DESC buildingsPSO = basePSO;
@@ -270,74 +323,92 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
   }
 
   {
+    D3D12_DEPTH_STENCIL_DESC windowsStencilDepthStencilState;
+    windowsStencilDepthStencilState.DepthEnable = TRUE;
+    windowsStencilDepthStencilState.DepthEnable = TRUE;
+    windowsStencilDepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+    windowsStencilDepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    windowsStencilDepthStencilState.StencilEnable = TRUE;
+    windowsStencilDepthStencilState.StencilReadMask = 0x1;
+    windowsStencilDepthStencilState.StencilWriteMask = 0x1;
+    windowsStencilDepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsStencilDepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsStencilDepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
+    windowsStencilDepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    windowsStencilDepthStencilState.BackFace = windowsStencilDepthStencilState.FrontFace;
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsStencilPSO = basePSO;
     windowsStencilPSO.VS = {genericVS->GetBufferPointer(), genericVS->GetBufferSize()};
     windowsStencilPSO.PS = {emptyPS->GetBufferPointer(), emptyPS->GetBufferSize()};
     windowsStencilPSO.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
-    windowsStencilPSO.DepthStencilState.DepthEnable = TRUE;
-    windowsStencilPSO.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-    windowsStencilPSO.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-    windowsStencilPSO.DepthStencilState.StencilEnable = TRUE;
-    windowsStencilPSO.DepthStencilState.StencilReadMask = 0x1;
-    windowsStencilPSO.DepthStencilState.StencilWriteMask = 0x1;
-    windowsStencilPSO.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsStencilPSO.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsStencilPSO.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_INCR;
-    windowsStencilPSO.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    windowsStencilPSO.DepthStencilState.BackFace = windowsStencilPSO.DepthStencilState.FrontFace;
+    windowsStencilPSO.DepthStencilState = windowsStencilDepthStencilState;
     windowsStencilPSO.NumRenderTargets = 0;
     windowsStencilPSO.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
     HR(device->CreateGraphicsPipelineState(&windowsStencilPSO, IID_PPV_ARGS(&m_psoWindows_Stencil)));
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsStencilPSO_ShadowMap = baseShadowMapPSO;
+    windowsStencilPSO_ShadowMap.DepthStencilState = windowsStencilDepthStencilState;
+    windowsStencilPSO_ShadowMap.RasterizerState.CullMode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+    HR(device->CreateGraphicsPipelineState(&windowsStencilPSO_ShadowMap,
+                                           IID_PPV_ARGS(&m_psoShadowMap_Windows_Stencil)));
   }
 
   {
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsDepthPSO = basePSO;
-    windowsDepthPSO.VS = {genericVS->GetBufferPointer(), genericVS->GetBufferSize()};
-    windowsDepthPSO.PS = {emptyPS->GetBufferPointer(), emptyPS->GetBufferSize()};
-    windowsDepthPSO.DepthStencilState.DepthEnable = TRUE;
-    windowsDepthPSO.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-    windowsDepthPSO.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    windowsDepthPSO.DepthStencilState.StencilEnable = TRUE;
-    windowsDepthPSO.DepthStencilState.StencilReadMask = 0x1;
-    windowsDepthPSO.DepthStencilState.StencilWriteMask = 0x1;
-    windowsDepthPSO.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-    windowsDepthPSO.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-    windowsDepthPSO.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    windowsDepthPSO.NumRenderTargets = 0;
-    windowsDepthPSO.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
-    HR(device->CreateGraphicsPipelineState(&windowsDepthPSO, IID_PPV_ARGS(&m_psoWindows_MaxDepth)));
+    D3D12_DEPTH_STENCIL_DESC windowsMaxDepthStencilState;
+    windowsMaxDepthStencilState.DepthEnable = TRUE;
+    windowsMaxDepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+    windowsMaxDepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    windowsMaxDepthStencilState.StencilEnable = TRUE;
+    windowsMaxDepthStencilState.StencilReadMask = 0x1;
+    windowsMaxDepthStencilState.StencilWriteMask = 0x1;
+    windowsMaxDepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+    windowsMaxDepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+    windowsMaxDepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsMaxDepthPSO = basePSO;
+    windowsMaxDepthPSO.VS = {genericVS->GetBufferPointer(), genericVS->GetBufferSize()};
+    windowsMaxDepthPSO.PS = {emptyPS->GetBufferPointer(), emptyPS->GetBufferSize()};
+    windowsMaxDepthPSO.DepthStencilState = windowsMaxDepthStencilState;
+    windowsMaxDepthPSO.NumRenderTargets = 0;
+    windowsMaxDepthPSO.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+    HR(device->CreateGraphicsPipelineState(&windowsMaxDepthPSO, IID_PPV_ARGS(&m_psoWindows_MaxDepth)));
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsMapDepthPSO_ShadowMap = baseShadowMapPSO;
+    windowsMapDepthPSO_ShadowMap.DepthStencilState = windowsMaxDepthStencilState;
+    HR(device->CreateGraphicsPipelineState(&windowsMapDepthPSO_ShadowMap, IID_PPV_ARGS(&m_psoShadowMap_Windows_MaxDepth)));
   }
 
   {
+    D3D12_DEPTH_STENCIL_DESC windowsMinDepthStencilState;
+    windowsMinDepthStencilState.DepthEnable = TRUE;
+    windowsMinDepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    windowsMinDepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    windowsMinDepthStencilState.StencilEnable = TRUE;
+    windowsMinDepthStencilState.StencilReadMask = 0x1;
+    windowsMinDepthStencilState.StencilWriteMask = 0x1;
+    windowsMinDepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+    windowsMinDepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+    windowsMinDepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsColorPSO = basePSO;
     windowsColorPSO.VS = {genericVS->GetBufferPointer(), genericVS->GetBufferSize()};
     windowsColorPSO.PS = {genericColorPS->GetBufferPointer(), genericColorPS->GetBufferSize()};
-    windowsColorPSO.DepthStencilState.DepthEnable = TRUE;
-    windowsColorPSO.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    windowsColorPSO.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    windowsColorPSO.DepthStencilState.StencilEnable = TRUE;
-    windowsColorPSO.DepthStencilState.StencilReadMask = 0x1;
-    windowsColorPSO.DepthStencilState.StencilWriteMask = 0x1;
-    windowsColorPSO.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
-    windowsColorPSO.DepthStencilState.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-    windowsColorPSO.DepthStencilState.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    windowsColorPSO.DepthStencilState = windowsMinDepthStencilState;
     HR(device->CreateGraphicsPipelineState(&windowsColorPSO, IID_PPV_ARGS(&m_psoWindows_MinDepth_Color)));
 
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsMinDepth = windowsColorPSO;
-    windowsColorPSO.PS = {emptyPS->GetBufferPointer(), emptyPS->GetBufferSize()};
-    windowsMinDepth.NumRenderTargets = 0;
-    windowsMinDepth.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
-    HR(device->CreateGraphicsPipelineState(&windowsColorPSO, IID_PPV_ARGS(&m_psoWindows_MinDepth)));
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC windowsMinDepth_ShadowMap = baseShadowMapPSO;
+    windowsMinDepth_ShadowMap.DepthStencilState = windowsMinDepthStencilState;
+    HR(device->CreateGraphicsPipelineState(&windowsMinDepth_ShadowMap, IID_PPV_ARGS(&m_psoShadowMap_Windows_MinDepth)));
   }
 
   {
@@ -345,5 +416,10 @@ void TownscaperPSOs::Initialize(ID3D12Device* device) {
     genericColorPSO.VS = {genericVS->GetBufferPointer(), genericVS->GetBufferSize()};
     genericColorPSO.PS = {genericColorPS->GetBufferPointer(), genericColorPS->GetBufferSize()};
     HR(device->CreateGraphicsPipelineState(&genericColorPSO, IID_PPV_ARGS(&m_psoGenericColor)));
+  }
+
+  {
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowMapPSO = baseShadowMapPSO;
+    HR(device->CreateGraphicsPipelineState(&shadowMapPSO, IID_PPV_ARGS(&m_psoShadowMap_Generic)));
   }
 }

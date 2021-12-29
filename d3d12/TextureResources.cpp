@@ -16,7 +16,7 @@ DXGI_FORMAT ConvertDSVFormatToTypeless(DXGI_FORMAT format) {
   case DXGI_FORMAT_D32_FLOAT:
     return DXGI_FORMAT_R32_TYPELESS;
   case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-    return DXGI_FORMAT_R32G32_TYPELESS;
+    return DXGI_FORMAT_R32G8X24_TYPELESS;
   default:
     assert(false);
     return DXGI_FORMAT_UNKNOWN;
