@@ -1,0 +1,9 @@
+static_library("utils") {
+  sources = [
+    "comhelper.h",
+    "MessageQueue.cpp",
+    "MessageQueue.h",
+    "Timer.cpp",
+    "Timer.h",
+  ]
+}

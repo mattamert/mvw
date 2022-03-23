@@ -1,7 +1,7 @@
 #include "ConstantBufferAllocator.h"
 
-#include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
+#include "utils/comhelper.h"
 
 #include <assert.h>
 

@@ -1,8 +1,6 @@
-#include "DXApp.h"
+#include "app/DXApp.h"
 
-#include "d3d12/comhelper.h"
-#include "d3d12/d3dx12.h"
-#include "d3d12/MessageQueue.h"
+#include "utils/MessageQueue.h"
 
 #include <d3d12.h>
 #include <d3dcompiler.h>

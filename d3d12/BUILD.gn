@@ -1,14 +1,13 @@
-executable("d3d12_renderer") {
-  libs = [ "user32.lib", "Ole32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib", "dxguid.lib" ]
+static_library("d3d12_renderer") {
+  libs = [ "d3d12.lib", "dxgi.lib", "d3dcompiler.lib", "dxguid.lib" ]
 
-  deps = [":d3d12_renderer_shaders"]
+  deps = [":d3d12_renderer_shaders", "//utils:utils"]
 
   sources = [
     "Animation.cpp",
     "Animation.h",
     "Camera.cpp",
     "Camera.h",
-    "comhelper.h",
     "ConstantBufferAllocator.cpp",
     "ConstantBufferAllocator.h",
     "D3D12Renderer.cpp",
@@ -16,13 +15,8 @@ executable("d3d12_renderer") {
     "d3dx12.h",
     "DescriptorHeapManagers.cpp",
     "DescriptorHeapManagers.h",
-    "DXApp.cpp",
-    "DXApp.h",
     "ImageLoader.cpp",
     "ImageLoader.h",
-    "main.cpp",
-    "MessageQueue.cpp",
-    "MessageQueue.h",
     "Model.cpp",
     "Model.h",
     "Object.cpp",
@@ -39,10 +33,6 @@ executable("d3d12_renderer") {
     "Scene.h",
     "TextureResources.cpp",
     "TextureResources.h",
-    "Timer.cpp",
-    "Timer.h",
-    "WindowProxy.cpp",
-    "WindowProxy.h",
     "WindowSwapChain.cpp",
     "WindowSwapChain.h",
   ]

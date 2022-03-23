@@ -1,4 +1,4 @@
-#include "d3d12/WindowProxy.h"
+#include "app/Window.h"
 
 #include <string>
 
@@ -15,11 +15,11 @@ static LRESULT CALLBACK DXWindowWndProc(HWND hwnd, UINT message, WPARAM wParam, 
   msg.wParam = wParam;
   msg.lParam = lParam;
 
-  WindowProxy* handler = reinterpret_cast<WindowProxy*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  Window* handler = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
   switch (message) {
     case WM_CREATE: {
       LPCREATESTRUCT createStruct = (LPCREATESTRUCT)lParam;
-      WindowProxy* handler = (WindowProxy*)createStruct->lpCreateParams;
+      Window* handler = (Window*)createStruct->lpCreateParams;
       SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)handler);
       return 0;
     }
@@ -99,7 +99,7 @@ void RegisterDXWindow() {
   // HR(E_FAIL);
 }
 
-HWND CreateDXWindow(WindowProxy* handler, const std::wstring& windowName, int width, int height) {
+HWND CreateDXWindow(Window* handler, const std::wstring& windowName, int width, int height) {
   RegisterDXWindow();
 
   // TODO: Look into how to remove the title bar.
@@ -127,7 +127,7 @@ void ShowDXWindow(HWND hwnd) {
 
 }  // namespace
 
-void WindowProxy::Initialize(std::string filename, bool isTownscaper) {
+void Window::Initialize(std::string filename, bool isTownscaper) {
   m_messageQueue = std::make_shared<MessageQueue>();
 
   HWND hwnd = CreateDXWindow(this, L"mvw", 640, 480);
@@ -140,10 +140,10 @@ void WindowProxy::Initialize(std::string filename, bool isTownscaper) {
   m_renderThread = std::thread(DXApp::RunRenderLoop, std::move(app));
 }
 
-void WindowProxy::WaitForRenderThreadToFinish() {
+void Window::WaitForRenderThreadToFinish() {
   m_renderThread.join();
 }
 
-void WindowProxy::PushMessage(MSG msg) {
+void Window::PushMessage(MSG msg) {
   m_messageQueue->Push(msg);
 }

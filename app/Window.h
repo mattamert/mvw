@@ -4,16 +4,16 @@
 #include <string>
 #include <thread>
 
-#include "d3d12/DXApp.h"
-#include "d3d12/MessageQueue.h"
+#include "app/DXApp.h"
+#include "utils/MessageQueue.h"
 
-class WindowProxy {
+class Window {
  private:
   std::shared_ptr<MessageQueue> m_messageQueue;
   std::thread m_renderThread;
 
  public:
-  WindowProxy() = default;
+  Window() = default;
 
   void Initialize(std::string filename, bool isTownscaper);
   void PushMessage(MSG msg);

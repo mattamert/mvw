@@ -1,10 +1,10 @@
 #include "d3d12/Model.h"
 
-#include "d3d12/comhelper.h"
 #include "d3d12/D3D12Renderer.h"
 #include "d3d12/d3dx12.h"
 #include "d3d12/ImageLoader.h"
 #include "d3d12/ObjFileLoader.h"
+#include "utils/comhelper.h"
 
 #include <wrl/client.h>  // For ComPtr
 

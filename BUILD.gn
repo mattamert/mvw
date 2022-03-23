@@ -1,6 +1,6 @@
 # This is just to create dependencies between the root BUILD.gn and all top-level build targets.
 group("gn_all") {
   deps = [
-    "//d3d12:d3d12_renderer",
+    "//app:app",
   ]
 }

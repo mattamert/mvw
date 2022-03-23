@@ -25,11 +25,11 @@ struct Model {
   std::vector<Material> m_materials;
   ObjFileData::AxisAlignedBounds m_bounds;
 
-  void Model::Init(D3D12Renderer* renderer,
-                   const std::vector<ObjFileData::Vertex>& vertices,
-                   const std::vector<uint32_t>& indices,
-                   const std::vector<ObjFileData::MeshPart>& meshParts,
-                   const std::vector<ObjFileData::Material>& materials);
+  void Init(D3D12Renderer* renderer,
+            const std::vector<ObjFileData::Vertex>& vertices,
+            const std::vector<uint32_t>& indices,
+            const std::vector<ObjFileData::MeshPart>& meshParts,
+            const std::vector<ObjFileData::Material>& materials);
 
   void InitCube(D3D12Renderer* renderer);
   bool InitFromObjFile(D3D12Renderer* renderer, const std::string& fileName);

@@ -6,9 +6,9 @@
 #include <string>
 #include <thread>
 
-#include "d3d12/DXApp.h"
-#include "d3d12/MessageQueue.h"
-#include "d3d12/WindowProxy.h"
+#include "app/DXApp.h"
+#include "app/Window.h"
+#include "utils/MessageQueue.h"
 
 #define USE_CONSOLE_SUBSYSTEM
 
@@ -26,8 +26,8 @@ void RunMessageLoop() {
 
 #ifdef USE_CONSOLE_SUBSYSTEM
 
-void EmitUsageMessage() {
-  std::cerr << "Usage: d3d12_renderer.exe [-townscaper] <obj file>" << std::endl;
+void EmitUsageMessage(const char* exeName) {
+  std::cerr << "Usage: " << exeName << " [-townscaper] <obj file>" << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
   }
 
   if (argc < 2) {
-    EmitUsageMessage();
+    EmitUsageMessage(argv[0]);
     return 1;
   }
 
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     } else if (objFilename.empty()) {
       objFilename = std::move(arg);
     } else {
-      EmitUsageMessage();
+      EmitUsageMessage(argv[0]);
       return 1;
     }
   }
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
-      WindowProxy proxy;
-      proxy.Initialize(std::move(objFilename), isTownscaper);
+      Window appWindow;
+      appWindow.Initialize(std::move(objFilename), isTownscaper);
       RunMessageLoop();
     }
     CoUninitialize();
@@ -95,8 +95,8 @@ int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPSTR /
 
   if (SUCCEEDED(CoInitialize(NULL))) {
     {
-      WindowProxy proxy;
-      proxy.Initialize();
+      Window appWindow;
+      appWindow.Initialize();
       RunMessageLoop();
     }
     CoUninitialize();

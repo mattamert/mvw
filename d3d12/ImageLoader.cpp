@@ -1,6 +1,6 @@
 #include "d3d12/ImageLoader.h"
 
-#include "d3d12/comhelper.h"
+#include "utils/comhelper.h"
 
 #include <wincodec.h>
 #include <wrl/client.h>  // For ComPtr

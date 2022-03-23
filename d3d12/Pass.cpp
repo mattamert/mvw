@@ -2,8 +2,8 @@
 
 #include <d3dcompiler.h>
 
-#include "d3d12/comhelper.h"
 #include "d3d12/d3dx12.h"
+#include "utils/comhelper.h"
 
 using namespace Microsoft::WRL;
 

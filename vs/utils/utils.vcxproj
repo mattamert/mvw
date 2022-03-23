@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{47A7C8DB-FEFD-4708-A5CD-0FA5228C0F73}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\NinjaCommands.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <NinjaTarget_utils>utils</NinjaTarget_utils>
+    <NMakeOutput>$(NinjaDir)\$(NinjaTarget_utils).lib</NMakeOutput>
+    <NMakePreprocessorDefinitions>_HAS_CXX17;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>$(NinjaBuildCommand) $(NinjaTarget_utils)</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(NinjaCleanCommand) $(NinjaTarget_utils)
+$(NinjaBuildCommand) $(NinjaTarget_utils)</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(NinjaCleanCommand) $(NinjaTarget_utils)</NMakeCleanCommandLine>
+    <IncludePath>$(SolutionDir);$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\utils\Timer.cpp" />
+    <ClCompile Include="..\..\utils\MessageQueue.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\utils\Timer.h" />
+    <ClInclude Include="..\..\utils\MessageQueue.h" />
+    <ClInclude Include="..\..\utils\comhelper.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
